@@ -1,0 +1,153 @@
+/* =========================================================================
+   TaskPulse — global design layer
+   Loaded after primeicons.css and primeflex.css (both wired in angular.json;
+   do NOT re-import them here).
+
+   Sections
+     1. Font
+     2. Accent palette (PrimeNG Aura primary -> indigo)
+     3. Neutral tokens
+     4. Base elements
+     5. Type scale
+     6. Motion
+   ========================================================================= */
+
+/* -- 1. Font -------------------------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --tp-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+
+  /* Hand the same stack to PrimeNG so components match the shell. */
+  --p-font-family: var(--tp-font-family);
+}
+
+/* -- 2. Accent palette ----------------------------------------------------
+   Aura's primary ramp is redefined as indigo so a single accent colour drives
+   every primary button, focus ring, active state and link in the app.
+   -------------------------------------------------------------------------- */
+
+:root {
+  --p-primary-50: #eef2ff;
+  --p-primary-100: #e0e7ff;
+  --p-primary-200: #c7d2fe;
+  --p-primary-300: #a5b4fc;
+  --p-primary-400: #818cf8;
+  --p-primary-500: #6366f1;
+  --p-primary-600: #4f46e5;
+  --p-primary-700: #4338ca;
+  --p-primary-800: #3730a3;
+  --p-primary-900: #312e81;
+  --p-primary-950: #1e1b4b;
+
+  --p-primary-color: var(--p-primary-600);
+  --p-primary-contrast-color: #ffffff;
+  --p-primary-hover-color: var(--p-primary-700);
+  --p-primary-active-color: var(--p-primary-800);
+}
+
+/* -- 3. Neutral tokens ---------------------------------------------------- */
+
+:root {
+  --tp-bg: #f6f7fb;
+  --tp-surface: #ffffff;
+  --tp-border: #e5e7eb;
+
+  --tp-text: #1f2430;
+  --tp-text-muted: #6b7280;
+  --tp-text-subtle: #9ca3af;
+
+  --tp-radius: 12px;
+  --tp-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
+
+  --tp-container-width: 960px;
+  --tp-transition: 180ms ease;
+}
+
+/* -- 4. Base elements ----------------------------------------------------- */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--tp-font-family);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--tp-font-family);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--tp-text);
+  background-color: var(--tp-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--p-primary-color);
+  text-decoration: none;
+  transition: color var(--tp-transition);
+}
+
+a:hover {
+  color: var(--p-primary-hover-color);
+  text-decoration: underline;
+}
+
+/* -- 5. Type scale --------------------------------------------------------
+   Three reusable steps. Components should use these instead of inventing
+   their own font sizes.
+   -------------------------------------------------------------------------- */
+
+.tp-page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--tp-text);
+}
+
+.tp-section-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tp-text-subtle);
+}
+
+.tp-body {
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--tp-text);
+}
+
+.tp-muted {
+  color: var(--tp-text-muted);
+}
+
+/* -- 6. Motion ------------------------------------------------------------
+   A single opt-in helper for subtle state changes. PrimeNG supplies the rest
+   through its own built-in transitions.
+   -------------------------------------------------------------------------- */
+
+.tp-transition {
+  transition: background-color var(--tp-transition), color var(--tp-transition),
+    border-color var(--tp-transition), box-shadow var(--tp-transition),
+    opacity var(--tp-transition);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-transition {
+    transition: none;
+  }
+}

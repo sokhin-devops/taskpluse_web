@@ -1,0 +1,38 @@
+:host {
+  display: contents;
+}
+
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-top: 0.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.field-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-text-color, #3f3f46);
+}
+
+.field-error {
+  font-size: 0.8125rem;
+  color: var(--p-red-500, #ef4444);
+}
+
+.task-form textarea {
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.task-form input.ng-invalid.ng-touched,
+.task-form textarea.ng-invalid.ng-touched {
+  border-color: var(--p-red-400, #f87171);
+  transition: border-color 150ms ease;
+}

@@ -1,0 +1,311 @@
+/* =========================================================================
+   Task list screen
+   One card holding the page heading (table caption) and the task table, plus
+   the empty / error / no-match states that replace the table.
+
+   Colours, radii and spacing come from the global tokens in src/styles.scss.
+   PrimeNG internals reached through `styleClass` are not touched by Angular's
+   emulated encapsulation, so those few rules go through ::ng-deep.
+
+   Sections
+     1. Page frame
+     2. Card shell
+     3. Heading
+     4. Search
+     5. Table columns
+     6. Task cell
+     7. Due date + status cells
+     8. Row actions
+     9. Empty / error / no-match states
+    10. Responsive
+   ========================================================================= */
+
+:host {
+  display: block;
+}
+
+/* -- 1. Page frame -------------------------------------------------------
+   The centred column and its gutters come from .app-container in the shell,
+   so this only stacks the card.
+   ------------------------------------------------------------------------ */
+
+.tp-page {
+  display: block;
+}
+
+.tp-page__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* -- 2. Card shell --------------------------------------------------------
+   The card's own padding is removed so the heading and the table run edge to
+   edge; each block below supplies its own padding instead. `overflow: hidden`
+   keeps the table and paginator inside the rounded corners.
+   ------------------------------------------------------------------------- */
+
+:host ::ng-deep .tp-card {
+  overflow: hidden;
+  border: 1px solid var(--tp-border);
+  border-radius: var(--tp-radius);
+  background: var(--tp-surface);
+  box-shadow: var(--tp-shadow);
+}
+
+:host ::ng-deep .tp-card .p-card-body {
+  padding: 0;
+  gap: 0;
+}
+
+:host ::ng-deep .tp-card .p-card-content {
+  padding: 0;
+}
+
+/* The caption wrapper is only a container for .tp-header, which brings its own
+   padding — matching the heading in the states that render without a table. */
+:host ::ng-deep .tp-table .p-datatable-header {
+  padding: 0;
+  border: 0 none;
+  background: transparent;
+}
+
+:host ::ng-deep .tp-table .p-datatable-tbody > tr > td {
+  vertical-align: middle;
+}
+
+/* Second line of the loading skeleton, under the placeholder task title. */
+:host ::ng-deep .tp-skeleton-sub {
+  margin-top: 0.5rem;
+}
+
+/* -- 3. Heading ----------------------------------------------------------- */
+
+.tp-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--tp-border);
+}
+
+.tp-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+/* Same step as .tp-page-title in the global type scale. */
+.tp-header__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--tp-text);
+}
+
+.tp-header__summary {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--tp-text-muted);
+}
+
+.tp-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* -- 4. Search ------------------------------------------------------------ */
+
+.tp-search__input {
+  width: 15rem;
+}
+
+/* -- 5. Table columns -----------------------------------------------------
+   Widths are set on the header cells and repeated on the action cells so the
+   layout stays put as rows are filtered. Below the table's 768px breakpoint
+   PrimeNG stacks every cell to full width, overriding these.
+   ------------------------------------------------------------------------- */
+
+.tp-col-task {
+  width: auto;
+  min-width: 14rem;
+}
+
+.tp-col-due {
+  width: 11rem;
+  white-space: nowrap;
+}
+
+.tp-col-status {
+  width: 9rem;
+  white-space: nowrap;
+}
+
+.tp-col-actions {
+  width: 9rem;
+  text-align: right;
+}
+
+/* Per-cell labels for the stacked layout. PrimeNG reveals these itself under
+   the breakpoint; they must stay hidden while the real header row is visible. */
+.p-datatable-column-title {
+  display: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tp-text-muted);
+}
+
+.tp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -- 6. Task cell --------------------------------------------------------- */
+
+.tp-task {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.tp-task__title {
+  font-weight: 500;
+  color: var(--tp-text);
+}
+
+.tp-task__description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tp-text-muted);
+}
+
+.tp-row--done .tp-task__title {
+  color: var(--tp-text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* -- 7. Due date + status cells ------------------------------------------- */
+
+.tp-due {
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--tp-text-muted);
+  white-space: nowrap;
+}
+
+.tp-blank {
+  color: var(--tp-text-subtle);
+}
+
+/* -- 8. Row actions ------------------------------------------------------- */
+
+.tp-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+/* -- 9. Empty / error / no-match states ----------------------------------- */
+
+.tp-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3.5rem 1.5rem 4rem;
+  text-align: center;
+}
+
+.tp-state__icon {
+  font-size: 2.25rem;
+  line-height: 1;
+  color: var(--p-primary-color);
+}
+
+.tp-state__icon--error {
+  color: var(--p-red-500, #ef4444);
+}
+
+.tp-state__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--tp-text);
+}
+
+.tp-state__text {
+  margin: 0 0 0.5rem;
+  max-width: 30rem;
+  color: var(--tp-text-muted);
+}
+
+.tp-nomatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2.75rem 1.5rem;
+  color: var(--tp-text-muted);
+
+  i {
+    font-size: 1rem;
+    color: var(--tp-text-subtle);
+  }
+}
+
+/* -- 10. Responsive -------------------------------------------------------
+   The table's own stacking is handled by PrimeNG at 768px. These rules give
+   the heading and the search field room on narrow screens.
+   ------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .tp-header {
+    align-items: flex-start;
+    padding: 1.125rem 1.25rem;
+  }
+
+  .tp-header__actions {
+    width: 100%;
+  }
+
+  :host ::ng-deep .tp-search {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .tp-search__input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .tp-header__title {
+    font-size: 1.3125rem;
+  }
+
+  .tp-state {
+    padding: 2.75rem 1.25rem 3rem;
+  }
+}

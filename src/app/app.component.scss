@@ -1,0 +1,86 @@
+/* =========================================================================
+   Application shell
+   A slim sticky top bar over a centred content column.
+   Colours come from the global tokens defined in src/styles.scss.
+   ========================================================================= */
+
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+/* --- Top bar ------------------------------------------------------------ */
+
+.app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--tp-surface);
+  border-bottom: 1px solid var(--tp-border);
+  backdrop-filter: saturate(180%) blur(6px);
+}
+
+.app-bar__inner {
+  max-width: var(--tp-container-width);
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+}
+
+/* --- Wordmark ----------------------------------------------------------- */
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  user-select: none;
+}
+
+.wordmark__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+
+  i {
+    font-size: 1rem;
+    line-height: 1;
+  }
+}
+
+.wordmark__name {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--tp-text);
+}
+
+/* --- Content column ----------------------------------------------------- */
+
+.app-main {
+  display: block;
+  padding: 2rem 0 4rem;
+}
+
+.app-container {
+  max-width: var(--tp-container-width);
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .app-bar__inner,
+  .app-container {
+    padding-inline: 1rem;
+  }
+
+  .app-main {
+    padding: 1.25rem 0 3rem;
+  }
+}

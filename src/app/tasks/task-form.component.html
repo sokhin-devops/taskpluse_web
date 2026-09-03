@@ -1,0 +1,78 @@
+<p-dialog
+  [visible]="visible"
+  (visibleChange)="onVisibleChange($event)"
+  [header]="editing ? 'Edit task' : 'New task'"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '32rem' }"
+  [breakpoints]="{ '640px': '92vw' }"
+>
+  <form class="task-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+    <div class="field">
+      <label class="field-label" for="task-title">Title</label>
+      <input
+        id="task-title"
+        type="text"
+        pInputText
+        formControlName="title"
+        class="w-full"
+        placeholder="What needs to be done?"
+        autocomplete="off"
+      />
+      @if (titleControl.invalid && titleControl.touched) {
+        <small class="field-error">
+          @if (titleControl.hasError('required')) {
+            Title is required.
+          } @else {
+            Title cannot be longer than 200 characters.
+          }
+        </small>
+      }
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="task-description">Description</label>
+      <textarea
+        id="task-description"
+        pTextarea
+        formControlName="description"
+        class="w-full"
+        rows="4"
+        placeholder="Add a few details (optional)"
+      ></textarea>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="task-due-date">Due date</label>
+      <p-datepicker
+        inputId="task-due-date"
+        formControlName="dueDate"
+        [showIcon]="true"
+        dateFormat="yy-mm-dd"
+        appendTo="body"
+        [fluid]="true"
+        [showButtonBar]="true"
+        placeholder="yyyy-mm-dd"
+      ></p-datepicker>
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <div class="flex justify-content-end gap-2">
+      <p-button
+        label="Cancel"
+        severity="secondary"
+        [text]="true"
+        [disabled]="saving"
+        (onClick)="onCancel()"
+      ></p-button>
+      <p-button
+        [label]="editing ? 'Save' : 'Create'"
+        icon="pi pi-check"
+        [disabled]="form.invalid || saving"
+        [loading]="saving"
+        (onClick)="onSubmit()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>

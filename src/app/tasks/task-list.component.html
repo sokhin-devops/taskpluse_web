@@ -1,0 +1,230 @@
+<p-toast position="top-right"></p-toast>
+
+<p-confirmdialog
+  [style]="{ width: '28rem' }"
+  acceptButtonStyleClass="p-button-danger"
+  rejectButtonStyleClass="p-button-text p-button-secondary"
+></p-confirmdialog>
+
+<!-- Page heading + primary action, reused by the loading, empty and table states. -->
+<ng-template #pageHeader let-searchable="searchable">
+  <div class="tp-header">
+    <div class="tp-header__text">
+      <h1 class="tp-header__title">Tasks</h1>
+      <p class="tp-header__summary">{{ summary() }}</p>
+    </div>
+
+    <div class="tp-header__actions">
+      @if (searchable) {
+        <p-iconfield iconPosition="left" styleClass="tp-search">
+          <p-inputicon styleClass="pi pi-search"></p-inputicon>
+          <input
+            pInputText
+            type="text"
+            class="tp-search__input"
+            placeholder="Search tasks"
+            aria-label="Search tasks by title or description"
+            (input)="applyGlobalFilter($event)"
+          />
+        </p-iconfield>
+      }
+      <p-button label="New task" icon="pi pi-plus" (onClick)="openCreate()"></p-button>
+    </div>
+  </div>
+</ng-template>
+
+<main class="tp-page">
+  <div class="tp-page__inner">
+    <p-card styleClass="tp-card">
+      @if (loading()) {
+        <p-table
+          [value]="skeletonRows"
+          styleClass="tp-table"
+          responsiveLayout="stack"
+          breakpoint="768px"
+        >
+          <ng-template pTemplate="caption">
+            <ng-container *ngTemplateOutlet="pageHeader; context: { searchable: false }"></ng-container>
+          </ng-template>
+
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col" class="tp-col-task">Task</th>
+              <th scope="col" class="tp-col-due">Due date</th>
+              <th scope="col" class="tp-col-status">Status</th>
+              <th scope="col" class="tp-col-actions"><span class="tp-sr-only">Actions</span></th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body">
+            <tr aria-hidden="true">
+              <td>
+                <p-skeleton width="14rem" height="1rem"></p-skeleton>
+                <p-skeleton width="9rem" height="0.75rem" styleClass="tp-skeleton-sub"></p-skeleton>
+              </td>
+              <td><p-skeleton width="6rem" height="1.5rem" borderRadius="1rem"></p-skeleton></td>
+              <td><p-skeleton width="6rem" height="1.5rem" borderRadius="1rem"></p-skeleton></td>
+              <td>
+                <div class="tp-actions">
+                  <p-skeleton shape="circle" size="2rem"></p-skeleton>
+                  <p-skeleton shape="circle" size="2rem"></p-skeleton>
+                  <p-skeleton shape="circle" size="2rem"></p-skeleton>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      } @else if (loadFailed()) {
+        <ng-container *ngTemplateOutlet="pageHeader; context: { searchable: false }"></ng-container>
+        <div class="tp-state">
+          <i class="pi pi-exclamation-triangle tp-state__icon tp-state__icon--error" aria-hidden="true"></i>
+          <h2 class="tp-state__title">We couldn't load your tasks</h2>
+          <p class="tp-state__text">
+            The TaskPulse API did not respond. Check that it is running, then try again.
+          </p>
+          <p-button label="Try again" icon="pi pi-refresh" [outlined]="true" (onClick)="reload()"></p-button>
+        </div>
+      } @else if (tasks().length === 0) {
+        <ng-container *ngTemplateOutlet="pageHeader; context: { searchable: false }"></ng-container>
+        <div class="tp-state">
+          <i class="pi pi-check-circle tp-state__icon" aria-hidden="true"></i>
+          <h2 class="tp-state__title">No tasks yet</h2>
+          <p class="tp-state__text">
+            Add your first task and TaskPulse will keep its due date in view.
+          </p>
+          <p-button label="Add task" icon="pi pi-plus" (onClick)="openCreate()"></p-button>
+        </div>
+      } @else {
+        <p-table
+          #dt
+          [value]="tasks()"
+          dataKey="id"
+          [rows]="10"
+          [paginator]="tasks().length > 10"
+          [rowsPerPageOptions]="[10, 20, 50]"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="{first}-{last} of {totalRecords}"
+          [globalFilterFields]="globalFilterFields"
+          [rowHover]="true"
+          sortMode="single"
+          responsiveLayout="stack"
+          breakpoint="768px"
+          styleClass="tp-table"
+        >
+          <ng-template pTemplate="caption">
+            <ng-container *ngTemplateOutlet="pageHeader; context: { searchable: true }"></ng-container>
+          </ng-template>
+
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col" class="tp-col-task" pSortableColumn="title">
+                Task
+                <p-sortIcon field="title"></p-sortIcon>
+              </th>
+              <th scope="col" class="tp-col-due" pSortableColumn="dueDate">
+                Due date
+                <p-sortIcon field="dueDate"></p-sortIcon>
+              </th>
+              <th scope="col" class="tp-col-status">Status</th>
+              <th scope="col" class="tp-col-actions"><span class="tp-sr-only">Actions</span></th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-task>
+            <tr [class.tp-row--done]="task.completed">
+              <td>
+                <span class="p-datatable-column-title">Task</span>
+                <div class="tp-task">
+                  <span class="tp-task__title">{{ task.title }}</span>
+                  @if (task.description) {
+                    <span class="tp-task__description">{{ task.description }}</span>
+                  }
+                </div>
+              </td>
+
+              <td>
+                <span class="p-datatable-column-title">Due date</span>
+                @if (task.dueDate) {
+                  @if (dueSeverity(task); as severity) {
+                    <p-tag
+                      [severity]="severity"
+                      [value]="dueLabel(task)"
+                      [icon]="dueIcon(task)"
+                      [rounded]="true"
+                    ></p-tag>
+                  } @else {
+                    <span class="tp-due">{{ asDate(task.dueDate) | date: 'MMM d, y' }}</span>
+                  }
+                } @else {
+                  <span class="tp-blank" aria-label="No due date">&mdash;</span>
+                }
+              </td>
+
+              <td>
+                <span class="p-datatable-column-title">Status</span>
+                <p-tag
+                  [severity]="statusSeverity(task)"
+                  [value]="statusLabel(task)"
+                  [icon]="statusIcon(task)"
+                  [rounded]="true"
+                ></p-tag>
+              </td>
+
+              <td class="tp-col-actions">
+                <span class="p-datatable-column-title">Actions</span>
+                <div class="tp-actions">
+                  <p-button
+                    icon="pi pi-check"
+                    [rounded]="true"
+                    [text]="true"
+                    [severity]="toggleSeverity(task)"
+                    [pTooltip]="toggleTooltip(task)"
+                    tooltipPosition="top"
+                    [ariaLabel]="toggleTooltip(task)"
+                    [disabled]="isBusy(task.id)"
+                    (onClick)="onToggleComplete(task)"
+                  ></p-button>
+                  <p-button
+                    icon="pi pi-pencil"
+                    [rounded]="true"
+                    [text]="true"
+                    severity="secondary"
+                    pTooltip="Edit task"
+                    tooltipPosition="top"
+                    ariaLabel="Edit task"
+                    [disabled]="isBusy(task.id)"
+                    (onClick)="openEdit(task)"
+                  ></p-button>
+                  <p-button
+                    icon="pi pi-trash"
+                    [rounded]="true"
+                    [text]="true"
+                    severity="danger"
+                    pTooltip="Delete task"
+                    tooltipPosition="top"
+                    ariaLabel="Delete task"
+                    [disabled]="isBusy(task.id)"
+                    (onClick)="onDelete(task)"
+                  ></p-button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="4">
+                <div class="tp-nomatch">
+                  <i class="pi pi-search" aria-hidden="true"></i>
+                  <span>No tasks match your search.</span>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </p-card>
+  </div>
+</main>
+
+<app-task-form [(visible)]="formVisible" [task]="selectedTask" (saved)="onSaved()"></app-task-form>
