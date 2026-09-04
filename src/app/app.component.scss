@@ -1,8 +1,11 @@
 /* =========================================================================
    Application shell
-   A slim sticky top bar — wordmark, main navigation, account avatar — over a
-   centred content column. The bar is not rendered at all while signed out.
+   A fixed top bar — wordmark, main navigation, account avatar — above the one
+   scrolling content column. The bar is not rendered at all while signed out.
    Colours come from the global tokens defined in src/styles.scss.
+
+   The document itself does not scroll (see html/body in src/styles.scss); this
+   host is a viewport-height flex column and .app-main is the scroll container.
 
    Sections
      1. Top bar
@@ -13,20 +16,28 @@
      6. Responsive
    ========================================================================= */
 
+/* A fixed-height column: the bar takes the space it needs, .app-main takes the
+   rest and scrolls. dvh comes second so it wins where supported — on mobile,
+   100vh is the height with the browser chrome hidden, which leaves the bottom of
+   the app permanently under the address bar. */
 :host {
-  display: block;
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 /* -- 1. Top bar ---------------------------------------------------------- */
 
+/* Not sticky any more, and it does not need to be: the bar sits outside the
+   scroll container, so nothing ever passes underneath it. The translucent
+   backdrop went with it for the same reason — there is nothing behind it to
+   show through. */
 .app-bar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  flex: none;
   background: var(--tp-surface);
   border-bottom: 1px solid var(--tp-border);
-  backdrop-filter: saturate(180%) blur(6px);
 }
 
 .app-bar__inner {
@@ -163,8 +174,21 @@
 
 /* -- 5. Content column ---------------------------------------------------- */
 
+/* The application's single scroll container.
+
+   min-height: 0 is load-bearing: a flex item's default minimum size is its
+   content, so without it a long page makes .app-main grow past the viewport and
+   the whole shell scrolls again — the exact behaviour this layout removes.
+
+   scrollbar-gutter reserves the scrollbar's width whether or not it is showing,
+   so navigating between a short page and a long one does not shift the content
+   sideways. */
 .app-main {
-  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   padding: 2rem 0 4rem;
 }
 
@@ -174,8 +198,10 @@
   padding: 0 1.25rem;
 }
 
-/* The dashboard and the board are wider than the original 960px reading column,
-   so those screens opt out via their own max-width; this keeps the default. */
+/* Every screen shares this column width, including the dashboard and the board.
+   Both used to declare a wider max-width of their own, which did nothing: this
+   container clamps them first. Widening it here instead would leave the bar's
+   own inner column narrower than the content below it. */
 
 /* Signed out there is no bar and no navigation, so the login card centres in the
    whole viewport instead of sitting in the content column. */
@@ -183,8 +209,12 @@
   padding: 0;
 }
 
+/* Signed out there is no bar, so the scroll area is the full viewport height.
+   The explicit height gives the login screen a definite box to centre its card
+   in, instead of it reaching for 100vh and overflowing by the bar's height. */
 .app-container--bare {
   max-width: none;
+  height: 100%;
   padding: 0;
 }
 

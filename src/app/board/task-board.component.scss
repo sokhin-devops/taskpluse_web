@@ -1,7 +1,7 @@
 /* =========================================================================
    Kanban board
-   Three columns of draggable cards. Wider than the shell's reading column,
-   so the host overrides the container width for this screen.
+   Three columns of draggable cards. Width comes from the shell's content
+   column.
 
    Colours, radii and spacing come from the global tokens in src/styles.scss.
 
@@ -22,16 +22,14 @@
 }
 
 /* -- 1. Page frame -------------------------------------------------------
-   The board needs more room than the 960px reading column the shell sets, so
-   it widens its own container and keeps the shell's gutters.
+   The centred column and its gutters come from .app-container in the shell,
+   so this only stacks the heading above the columns.
    ------------------------------------------------------------------------ */
 
 .tp-board {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  max-width: 1200px;
-  margin: 0 auto;
 }
 
 /* -- 2. Heading ----------------------------------------------------------- */

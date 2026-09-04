@@ -1,5 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, ElementRef, computed, inject, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
@@ -23,6 +25,11 @@ interface NavLink {
  * <p>The bar hides itself while signed out. The login screen is the only route reachable
  * then, and showing navigation to places that would immediately bounce back would be
  * worse than showing none.</p>
+ *
+ * <p>The shell is a viewport-height flex column and the content area is the application's
+ * only scroll container, so the scrollbar belongs to the content rather than to the
+ * window. Resetting that container between screens is this component's job — see
+ * {@link resetScrollOnNavigation}.</p>
  */
 @Component({
   selector: 'app-root',
@@ -33,6 +40,11 @@ interface NavLink {
 export class AppComponent {
   private readonly auth = inject(AuthService);
   private readonly tagService = inject(TagService);
+  private readonly router = inject(Router);
+
+  /** The scrolling content area. Optional because the first navigation can finish
+      before the view has been created. */
+  private readonly scrollArea = viewChild<ElementRef<HTMLElement>>('scrollArea');
 
   readonly appName = 'TaskPulse';
 
@@ -70,6 +82,27 @@ export class AppComponent {
       }
     ];
   });
+
+  constructor() {
+    this.resetScrollOnNavigation();
+  }
+
+  /**
+   * Sends the content area back to the top when the route changes.
+   *
+   * <p>Angular's own {@code withInMemoryScrolling} cannot do this here. It drives
+   * {@code ViewportScroller}, which scrolls the window — and the window no longer
+   * scrolls, so it silently does nothing and each screen opens at the scroll offset the
+   * last one was left at. Scrolling the container directly is the equivalent.</p>
+   */
+  private resetScrollOnNavigation(): void {
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed()
+      )
+      .subscribe(() => this.scrollArea()?.nativeElement.scrollTo({ top: 0 }));
+  }
 
   private signOut(): void {
     // Clear the cached tags before leaving: they belong to the account signing out.

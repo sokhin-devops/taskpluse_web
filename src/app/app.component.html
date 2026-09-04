@@ -38,7 +38,9 @@
   </header>
 }
 
-<main class="app-main" [class.app-main--bare]="!isAuthenticated()">
+<!-- The application's only scroll container; AppComponent sends it back to the top
+     between screens. -->
+<main class="app-main" #scrollArea [class.app-main--bare]="!isAuthenticated()">
   <div class="app-container" [class.app-container--bare]="!isAuthenticated()">
     <router-outlet></router-outlet>
   </div>

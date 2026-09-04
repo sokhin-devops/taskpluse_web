@@ -57,6 +57,15 @@
   box-sizing: border-box;
 }
 
+/* The document is pinned to the viewport so it can never scroll itself. The app
+   shell owns the only scroll container (.app-main), which is what puts the
+   scrollbar beside the content instead of down the edge of the window. */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
 html {
   font-family: var(--tp-font-family);
   -webkit-text-size-adjust: 100%;
@@ -64,7 +73,6 @@ html {
 
 body {
   margin: 0;
-  min-height: 100vh;
   font-family: var(--tp-font-family);
   font-size: 0.9375rem;
   line-height: 1.55;

@@ -14,17 +14,23 @@
      6. Responsive
    ========================================================================= */
 
+/* Fills the shell's scroll area, which signed out is the whole viewport. */
 :host {
   display: block;
+  height: 100%;
 }
 
-/* -- 1. Page frame -------------------------------------------------------- */
+/* -- 1. Page frame --------------------------------------------------------
+   Centres the card in the space the shell gives it. Measured as a percentage
+   of that box rather than 100vh: the two are only the same number while no top
+   bar exists, and on mobile 100vh overshoots the visible viewport as well.
+   ------------------------------------------------------------------------- */
 
 .tp-auth {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100%;
   padding: 2rem 1.25rem;
 }
 
@@ -141,6 +147,8 @@
 /* -- 6. Responsive -------------------------------------------------------- */
 
 @media (max-width: 480px) {
+  /* Top-aligned on a short screen: centring a tall card in a short box pushes
+     its head off the top edge, where it cannot be scrolled back into view. */
   .tp-auth {
     align-items: flex-start;
     padding: 1.5rem 1rem;

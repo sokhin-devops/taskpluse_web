@@ -1,7 +1,7 @@
 /* =========================================================================
    Dashboard
    A hero figure and KPI tiles, a two-series trend chart, and two magnitude
-   breakdowns. Wider than the shell's reading column, so it sets its own.
+   breakdowns. Width comes from the shell's content column.
 
    Chart colours are declared once as custom properties on the host and then
    referenced by role, so the two series hues live in one place rather than
@@ -46,8 +46,6 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  max-width: 1120px;
-  margin: 0 auto;
 }
 
 /* -- 2. Heading ----------------------------------------------------------- */
