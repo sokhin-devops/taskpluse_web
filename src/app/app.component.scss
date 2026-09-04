@@ -1,7 +1,16 @@
 /* =========================================================================
    Application shell
-   A slim sticky top bar over a centred content column.
+   A slim sticky top bar — wordmark, main navigation, account avatar — over a
+   centred content column. The bar is not rendered at all while signed out.
    Colours come from the global tokens defined in src/styles.scss.
+
+   Sections
+     1. Top bar
+     2. Wordmark
+     3. Navigation
+     4. Account avatar
+     5. Content column
+     6. Responsive
    ========================================================================= */
 
 :host {
@@ -9,7 +18,7 @@
   min-height: 100vh;
 }
 
-/* --- Top bar ------------------------------------------------------------ */
+/* -- 1. Top bar ---------------------------------------------------------- */
 
 .app-bar {
   position: sticky;
@@ -27,15 +36,25 @@
   height: 3.5rem;
   display: flex;
   align-items: center;
+  gap: 1.5rem;
 }
 
-/* --- Wordmark ----------------------------------------------------------- */
+.app-bar__account {
+  margin-left: auto;
+}
+
+/* -- 2. Wordmark --------------------------------------------------------- */
 
 .wordmark {
   display: inline-flex;
   align-items: center;
   gap: 0.625rem;
   user-select: none;
+  color: inherit;
+
+  &:hover {
+    text-decoration: none;
+  }
 }
 
 .wordmark__badge {
@@ -61,7 +80,88 @@
   color: var(--tp-text);
 }
 
-/* --- Content column ----------------------------------------------------- */
+/* -- 3. Navigation -------------------------------------------------------- */
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.app-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tp-text-muted);
+  white-space: nowrap;
+
+  i {
+    font-size: 0.9375rem;
+    line-height: 1;
+  }
+
+  &:hover {
+    background: var(--p-primary-50);
+    color: var(--p-primary-700);
+    text-decoration: none;
+  }
+}
+
+/* The active screen is marked with both weight and a tinted pill: colour alone
+   would be the only cue for anyone who cannot distinguish it. */
+.app-nav__link--active {
+  background: var(--p-primary-50);
+  color: var(--p-primary-700);
+  font-weight: 600;
+}
+
+/* -- 4. Account avatar ---------------------------------------------------- */
+
+.tp-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  padding: 0;
+  border: 1px solid var(--tp-border);
+  border-radius: 999px;
+  background: var(--p-primary-50);
+  color: var(--p-primary-700);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--p-primary-100);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}
+
+/* The email line in the account menu is a label, not a command: it should read
+   as muted text rather than a disabled action the user might try to click. */
+:host ::ng-deep .tp-account__email .p-menu-item-link {
+  cursor: default;
+  opacity: 1;
+}
+
+:host ::ng-deep .tp-account__email .p-menu-item-label {
+  font-size: 0.8125rem;
+  color: var(--tp-text-muted);
+}
+
+/* -- 5. Content column ---------------------------------------------------- */
 
 .app-main {
   display: block;
@@ -74,10 +174,55 @@
   padding: 0 1.25rem;
 }
 
+/* The dashboard and the board are wider than the original 960px reading column,
+   so those screens opt out via their own max-width; this keeps the default. */
+
+/* Signed out there is no bar and no navigation, so the login card centres in the
+   whole viewport instead of sitting in the content column. */
+.app-main--bare {
+  padding: 0;
+}
+
+.app-container--bare {
+  max-width: none;
+  padding: 0;
+}
+
+/* -- 6. Responsive -------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .app-bar__inner {
+    gap: 0.75rem;
+  }
+
+  /* Icons only: four labelled links do not fit beside the wordmark, and dropping
+     the labels keeps every destination reachable in one tap rather than hiding
+     them behind a menu. */
+  .app-nav__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .app-nav__link {
+    padding: 0.5rem 0.625rem;
+  }
+}
+
 @media (max-width: 640px) {
   .app-bar__inner,
   .app-container {
     padding-inline: 1rem;
+  }
+
+  .wordmark__name {
+    display: none;
   }
 
   .app-main {

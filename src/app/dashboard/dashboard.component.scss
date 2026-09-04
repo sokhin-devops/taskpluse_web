@@ -1,0 +1,655 @@
+/* =========================================================================
+   Dashboard
+   A hero figure and KPI tiles, a two-series trend chart, and two magnitude
+   breakdowns. Wider than the shell's reading column, so it sets its own.
+
+   Chart colours are declared once as custom properties on the host and then
+   referenced by role, so the two series hues live in one place rather than
+   being repeated down the file. They are a validated categorical pair (checked
+   for separation under simulated colour blindness and for contrast against the
+   card surface), not a taste call — see the component's class comment.
+
+   Sections
+     1. Page frame + chart tokens
+     2. Heading
+     3. Panels
+     4. Hero figure + meter
+     5. KPI tiles
+     6. Legend
+     7. Trend chart
+     8. Tooltip
+     9. Table view
+    10. Magnitude bars
+    11. States
+    12. Responsive
+   ========================================================================= */
+
+/* -- 1. Page frame + chart tokens ----------------------------------------- */
+
+:host {
+  display: block;
+
+  /* Categorical slot 1 — the headline measure on this page. */
+  --viz-completed: #2a78d6;
+  /* Categorical slot 2 — the single comparison series. */
+  --viz-created: #eb6834;
+  /* Magnitude bars: one series, so one hue. Same blue as the headline measure. */
+  --viz-bar: #2a78d6;
+  --viz-bar-track: #e8eef7;
+  /* Meter track: a lighter step of the fill's own ramp. */
+  --viz-meter-track: #cde2fb;
+  /* Gridlines: one step off the surface, recessive. */
+  --viz-grid: #e8e8e6;
+}
+
+.tp-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+/* -- 2. Heading ----------------------------------------------------------- */
+
+.tp-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tp-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.tp-header__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--tp-text);
+}
+
+.tp-header__summary {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--tp-text-muted);
+}
+
+/* -- 3. Panels ------------------------------------------------------------ */
+
+.tp-panel {
+  border: 1px solid var(--tp-border);
+  border-radius: var(--tp-radius);
+  background: var(--tp-surface);
+  box-shadow: var(--tp-shadow);
+}
+
+.tp-panel--chart {
+  padding: 1.125rem 1.25rem 1rem;
+}
+
+.tp-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tp-panel__titles {
+  min-width: 0;
+}
+
+.tp-panel__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--tp-text);
+}
+
+.tp-panel__subtitle {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--tp-text-muted);
+}
+
+.tp-panel__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.tp-panel__empty {
+  margin: 0;
+  padding: 1.75rem 0 0.5rem;
+  font-size: 0.875rem;
+  color: var(--tp-text-muted);
+}
+
+/* -- 4. Hero figure + meter -----------------------------------------------
+   The dashboard's single lead number: one ratio against a limit, so a big
+   figure plus a meter rather than a two-slice pie.
+   ------------------------------------------------------------------------- */
+
+.tp-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.125rem 1.25rem;
+  /* Full width, on its own row above the tiles.
+     Sharing a row with them does not divide evenly — a double-width hero plus five
+     single tiles needs seven columns, and any six-column arrangement leaves one tile
+     stranded on a second row beside a gap. Giving the hero the whole row is both
+     gapless and more prominent, which is what a lead figure wants anyway. */
+  grid-column: 1 / -1;
+}
+
+.tp-hero__value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.125rem;
+  font-size: 2.5rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tp-text);
+}
+
+.tp-hero__unit {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--tp-text-muted);
+}
+
+.tp-hero__caption {
+  font-size: 0.8125rem;
+  color: var(--tp-text-muted);
+}
+
+.tp-meter {
+  height: 0.5rem;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--viz-meter-track);
+}
+
+.tp-meter__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--viz-completed);
+  transition: width 240ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-meter__fill {
+    transition: none;
+  }
+}
+
+/* -- 5. KPI tiles --------------------------------------------------------- */
+
+.tp-kpis {
+  display: grid;
+  /* One column per tile; the hero spans them all on the row above. */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.tp-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 1rem 1.125rem;
+  color: inherit;
+
+  &:hover {
+    border-color: var(--p-primary-200);
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.tp-tile__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tp-text-subtle);
+
+  i {
+    font-size: 0.8125rem;
+    line-height: 1;
+  }
+}
+
+.tp-tile__value {
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tp-text);
+}
+
+/* Overdue work is the one figure here that asks to be acted on. It is marked
+   with a tinted border and coloured number *and* keeps its icon and label, so
+   the emphasis never rests on colour alone. */
+.tp-tile--attention {
+  border-color: var(--p-red-200, #fecaca);
+  background: var(--p-red-50, #fef2f2);
+}
+
+.tp-tile--attention .tp-tile__value {
+  color: var(--p-red-600, #dc2626);
+}
+
+.tp-tile--attention .tp-tile__label {
+  color: var(--p-red-500, #ef4444);
+}
+
+/* -- 6. Legend ------------------------------------------------------------
+   Always present for two series. The key is a short line, matching how the
+   series is actually drawn.
+   ------------------------------------------------------------------------- */
+
+.tp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.875rem;
+}
+
+.tp-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  font-size: 0.8125rem;
+  /* Text stays in text ink; the coloured key beside it carries identity. */
+  color: var(--tp-text-muted);
+}
+
+.tp-legend__key {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0.1875rem;
+  border-radius: 999px;
+}
+
+.tp-legend__key--completed {
+  background: var(--viz-completed);
+}
+
+.tp-legend__key--created {
+  background: var(--viz-created);
+}
+
+/* -- 7. Trend chart -------------------------------------------------------
+   The SVG scales with its container; strokes are pinned to their specified
+   width with vector-effect, so a 2px line stays 2px at any size.
+   ------------------------------------------------------------------------- */
+
+.tp-chart {
+  position: relative;
+  margin: 0.5rem 0 0;
+}
+
+.tp-chart__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.tp-chart__grid {
+  stroke: var(--viz-grid);
+  stroke-width: 1;
+}
+
+.tp-chart__crosshair {
+  stroke: var(--tp-text-subtle);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.tp-chart__line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.tp-chart__line--completed {
+  stroke: var(--viz-completed);
+}
+
+.tp-chart__line--created {
+  stroke: var(--viz-created);
+}
+
+/* End and hover markers carry a 2px ring in the surface colour so they stay
+   legible where the two lines cross each other. */
+.tp-chart__dot {
+  stroke: var(--tp-surface);
+  stroke-width: 2;
+}
+
+.tp-chart__dot--completed {
+  fill: var(--viz-completed);
+}
+
+.tp-chart__dot--created {
+  fill: var(--viz-created);
+}
+
+.tp-chart__tick {
+  font-size: 10px;
+  fill: var(--tp-text-subtle);
+}
+
+.tp-chart__endlabel {
+  font-size: 11px;
+  font-weight: 600;
+  /* Values wear text ink, never the series colour. */
+  fill: var(--tp-text-muted);
+}
+
+.tp-chart__empty {
+  font-size: 12px;
+  fill: var(--tp-text-subtle);
+}
+
+/* Invisible hover bands. Each covers a full day column, so the tooltip does
+   not require landing on the dot itself. */
+.tp-chart__hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+/* -- 8. Tooltip -----------------------------------------------------------
+   HTML rather than SVG text: real wrapping, real font sizing, and it can sit
+   above the plot without being clipped.
+   ------------------------------------------------------------------------- */
+
+.tp-tip {
+  position: absolute;
+  top: 0.25rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  min-width: 9rem;
+  padding: 0.5rem 0.625rem;
+  transform: translateX(0.75rem);
+  border: 1px solid var(--tp-border);
+  border-radius: 0.5rem;
+  background: var(--tp-surface);
+  box-shadow: var(--tp-shadow);
+  font-size: 0.75rem;
+  color: var(--tp-text-muted);
+  pointer-events: none;
+}
+
+/* Past the middle of the plot the tooltip flips to the other side of the
+   crosshair rather than running off the panel. */
+.tp-tip--flip {
+  transform: translateX(calc(-100% - 0.75rem));
+}
+
+.tp-tip__date {
+  font-weight: 600;
+  color: var(--tp-text);
+}
+
+.tp-tip__row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  strong {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    color: var(--tp-text);
+  }
+}
+
+/* -- 9. Table view -------------------------------------------------------- */
+
+.tp-table-wrap {
+  margin-top: 0.75rem;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.tp-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+
+  th,
+  td {
+    padding: 0.375rem 0.5rem;
+    border-bottom: 1px solid var(--tp-border);
+    text-align: left;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--tp-surface);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--tp-text-muted);
+  }
+
+  tbody th {
+    font-weight: 400;
+    color: var(--tp-text);
+  }
+}
+
+.tp-num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -- 10. Magnitude bars --------------------------------------------------
+   One series per panel, so one hue and no legend: the panel title says what
+   is plotted. Bars are capped in thickness and rounded only at the data end.
+   ------------------------------------------------------------------------- */
+
+.tp-breakdowns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.tp-breakdowns .tp-panel {
+  padding: 1.125rem 1.25rem 1.25rem;
+}
+
+.tp-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tp-bars__row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 2.25rem;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.tp-bars__label {
+  font-size: 0.8125rem;
+  color: var(--tp-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tp-bars__chip {
+  justify-self: start;
+  max-width: 100%;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tp-bars__track {
+  height: 0.625rem;
+  border-radius: 0.25rem;
+  background: var(--viz-bar-track);
+}
+
+/* Square at the baseline, 4px rounded at the data end. The minimum width keeps a
+   very small non-zero value visible rather than invisible. */
+.tp-bars__fill {
+  display: block;
+  height: 100%;
+  min-width: 0.125rem;
+  border-radius: 0 4px 4px 0;
+  background: var(--viz-bar);
+  transition: width 240ms ease;
+}
+
+/* A count of zero draws nothing at all: the minimum width above would otherwise
+   leave a sliver of bar next to the number 0, which reads as "a little" and is
+   the one value that must not. */
+.tp-bars__fill--zero {
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-bars__fill {
+    transition: none;
+  }
+}
+
+.tp-bars__value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--tp-text);
+}
+
+/* -- 11. States ----------------------------------------------------------- */
+
+.tp-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.tp-state__icon {
+  font-size: 2.25rem;
+  line-height: 1;
+  color: var(--p-primary-color);
+}
+
+.tp-state__icon--error {
+  color: var(--p-red-500, #ef4444);
+}
+
+.tp-state__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--tp-text);
+}
+
+.tp-state__text {
+  margin: 0 0 0.5rem;
+  max-width: 30rem;
+  color: var(--tp-text-muted);
+}
+
+:host ::ng-deep .tp-skeleton-gap {
+  margin: 0.5rem 0;
+}
+
+/* -- 12. Responsive ------------------------------------------------------- */
+
+@media (max-width: 1000px) {
+  .tp-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .tp-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tp-breakdowns {
+    grid-template-columns: 1fr;
+  }
+
+  .tp-panel__head {
+    flex-direction: column;
+  }
+
+  .tp-panel__controls {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .tp-header__title {
+    font-size: 1.3125rem;
+  }
+
+  .tp-hero__value {
+    font-size: 2.25rem;
+  }
+
+  .tp-bars__row {
+    grid-template-columns: 4.5rem 1fr 2rem;
+  }
+
+  /* A 30-day series in a phone-width panel puts the tick labels on top of each
+     other; the table view is the readable route to the same figures. */
+  .tp-chart__tick {
+    font-size: 9px;
+  }
+}

@@ -5,7 +5,7 @@
 
    Sections
      1. Font
-     2. Accent palette (PrimeNG Aura primary -> indigo)
+     2. Accent palette (where it lives, and why not here)
      3. Neutral tokens
      4. Base elements
      5. Type scale
@@ -25,28 +25,13 @@
 }
 
 /* -- 2. Accent palette ----------------------------------------------------
-   Aura's primary ramp is redefined as indigo so a single accent colour drives
-   every primary button, focus ring, active state and link in the app.
+   The indigo accent lives in app.config.ts, not here.
+
+   PrimeNG generates its theme at runtime and injects it into the document head
+   after this stylesheet, so redeclaring --p-primary-* on :root loses the cascade
+   and leaves the app on Aura's default emerald. Extending the preset with
+   definePreset is the only place the override actually takes.
    -------------------------------------------------------------------------- */
-
-:root {
-  --p-primary-50: #eef2ff;
-  --p-primary-100: #e0e7ff;
-  --p-primary-200: #c7d2fe;
-  --p-primary-300: #a5b4fc;
-  --p-primary-400: #818cf8;
-  --p-primary-500: #6366f1;
-  --p-primary-600: #4f46e5;
-  --p-primary-700: #4338ca;
-  --p-primary-800: #3730a3;
-  --p-primary-900: #312e81;
-  --p-primary-950: #1e1b4b;
-
-  --p-primary-color: var(--p-primary-600);
-  --p-primary-contrast-color: #ffffff;
-  --p-primary-hover-color: var(--p-primary-700);
-  --p-primary-active-color: var(--p-primary-800);
-}
 
 /* -- 3. Neutral tokens ---------------------------------------------------- */
 

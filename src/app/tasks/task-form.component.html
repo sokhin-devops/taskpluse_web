@@ -4,7 +4,7 @@
   [header]="editing ? 'Edit task' : 'New task'"
   [modal]="true"
   [draggable]="false"
-  [style]="{ width: '32rem' }"
+  [style]="{ width: '34rem' }"
   [breakpoints]="{ '640px': '92vw' }"
 >
   <form class="task-form" [formGroup]="form" (ngSubmit)="onSubmit()">
@@ -37,23 +37,97 @@
         pTextarea
         formControlName="description"
         class="w-full"
-        rows="4"
+        rows="3"
         placeholder="Add a few details (optional)"
       ></textarea>
     </div>
 
+    <!-- Status, priority and due date sit on one row: they are the three short
+         "when and how much" fields, and stacking them would push the tag picker
+         below the fold of the dialog. -->
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="task-status">Status</label>
+        <p-select
+          inputId="task-status"
+          formControlName="status"
+          [options]="statusChoices"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [fluid]="true"
+        ></p-select>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="task-priority">Priority</label>
+        <p-select
+          inputId="task-priority"
+          formControlName="priority"
+          [options]="priorityChoices"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [fluid]="true"
+        >
+          <ng-template #selectedItem let-selected>
+            <span class="choice">
+              <i [class]="selected.icon" aria-hidden="true"></i>
+              {{ selected.label }}
+            </span>
+          </ng-template>
+          <ng-template #item let-option>
+            <span class="choice">
+              <i [class]="option.icon" aria-hidden="true"></i>
+              {{ option.label }}
+            </span>
+          </ng-template>
+        </p-select>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="task-due-date">Due date</label>
+        <p-datepicker
+          inputId="task-due-date"
+          formControlName="dueDate"
+          [showIcon]="true"
+          dateFormat="yy-mm-dd"
+          appendTo="body"
+          [fluid]="true"
+          [showButtonBar]="true"
+          placeholder="yyyy-mm-dd"
+        ></p-datepicker>
+      </div>
+    </div>
+
     <div class="field">
-      <label class="field-label" for="task-due-date">Due date</label>
-      <p-datepicker
-        inputId="task-due-date"
-        formControlName="dueDate"
-        [showIcon]="true"
-        dateFormat="yy-mm-dd"
-        appendTo="body"
-        [fluid]="true"
-        [showButtonBar]="true"
-        placeholder="yyyy-mm-dd"
-      ></p-datepicker>
+      <label class="field-label" for="task-tags">Tags</label>
+      @if (tags().length > 0) {
+        <p-multiselect
+          inputId="task-tags"
+          formControlName="tagIds"
+          [options]="tags()"
+          optionLabel="name"
+          optionValue="id"
+          display="chip"
+          appendTo="body"
+          [fluid]="true"
+          [showToggleAll]="false"
+          placeholder="Add tags (optional)"
+          emptyMessage="No tags yet"
+        >
+          <ng-template #item let-tag>
+            <span class="choice">
+              <span class="swatch" [style.background]="tag.color" aria-hidden="true"></span>
+              {{ tag.name }}
+            </span>
+          </ng-template>
+        </p-multiselect>
+      } @else {
+        <small class="field-hint">
+          You have no tags yet. Create some on the Tags screen and they will appear here.
+        </small>
+      }
     </div>
   </form>
 

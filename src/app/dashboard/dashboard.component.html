@@ -1,0 +1,378 @@
+<p-toast position="top-right"></p-toast>
+
+<main class="tp-dash">
+  <header class="tp-header">
+    <div class="tp-header__text">
+      <h1 class="tp-header__title">Dashboard</h1>
+      <p class="tp-header__summary">Where your work stands right now.</p>
+    </div>
+    <p-button
+      icon="pi pi-refresh"
+      label="Refresh"
+      severity="secondary"
+      [outlined]="true"
+      [loading]="loading()"
+      (onClick)="reload()"
+    ></p-button>
+  </header>
+
+  @if (loading()) {
+    <section class="tp-kpis" aria-hidden="true">
+      <div class="tp-hero tp-panel">
+        <p-skeleton width="6rem" height="0.75rem"></p-skeleton>
+        <p-skeleton width="8rem" height="3rem" styleClass="tp-skeleton-gap"></p-skeleton>
+        <p-skeleton width="100%" height="0.5rem" borderRadius="1rem"></p-skeleton>
+      </div>
+      @for (tile of skeletonTiles; track tile) {
+        <div class="tp-tile tp-panel">
+          <p-skeleton width="4.5rem" height="0.75rem"></p-skeleton>
+          <p-skeleton width="3rem" height="1.75rem" styleClass="tp-skeleton-gap"></p-skeleton>
+        </div>
+      }
+    </section>
+    <div class="tp-panel tp-panel--chart">
+      <p-skeleton width="100%" height="14rem"></p-skeleton>
+    </div>
+  } @else if (loadFailed()) {
+    <div class="tp-panel tp-state">
+      <i class="pi pi-exclamation-triangle tp-state__icon tp-state__icon--error" aria-hidden="true"></i>
+      <h2 class="tp-state__title">We couldn't load your dashboard</h2>
+      <p class="tp-state__text">
+        The TaskPulse API did not respond. Check that it is running, then try again.
+      </p>
+      <p-button label="Try again" icon="pi pi-refresh" [outlined]="true" (onClick)="reload()"></p-button>
+    </div>
+  } @else if (stats()) {
+    <!-- Hero figure + KPI row. These are single numbers, so they are tiles rather
+         than a bar chart of five bars. -->
+    <section class="tp-kpis">
+      <div class="tp-hero tp-panel">
+        <span class="tp-tile__label">Completion rate</span>
+        <strong class="tp-hero__value">{{ completionRate() | number: '1.0-1' }}<span class="tp-hero__unit">%</span></strong>
+        <div
+          class="tp-meter"
+          role="progressbar"
+          [attr.aria-valuenow]="completionRate()"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-label]="'Completion rate: ' + completionCaption()"
+        >
+          <!-- Track is a lighter step of the fill's own ramp, so the pair reads as one
+               scale rather than two competing colours. -->
+          <div class="tp-meter__fill" [style.width.%]="completionRate()"></div>
+        </div>
+        <span class="tp-hero__caption">{{ completionCaption() }}</span>
+      </div>
+
+      @for (tile of tiles(); track tile.label) {
+        <a
+          class="tp-tile tp-panel tp-transition"
+          [class.tp-tile--attention]="tile.emphasis === 'attention'"
+          [routerLink]="tile.link"
+          [queryParams]="tile.query"
+        >
+          <span class="tp-tile__label">
+            <i [class]="tile.icon" aria-hidden="true"></i>
+            {{ tile.label }}
+          </span>
+          <strong class="tp-tile__value">{{ tile.value | number }}</strong>
+        </a>
+      }
+    </section>
+
+    <!-- Trend: change over time, two series, so a line chart with a legend. -->
+    <section class="tp-panel tp-panel--chart">
+      <header class="tp-panel__head">
+        <div class="tp-panel__titles">
+          <h2 class="tp-panel__title">Created and completed</h2>
+          <p class="tp-panel__subtitle">
+            {{ chart().totalCreated | number }} created,
+            {{ chart().totalCompleted | number }} completed in the last {{ days() }} days
+          </p>
+        </div>
+
+        <!-- Controls in one row above the chart. -->
+        <div class="tp-panel__controls">
+          <p-selectbutton
+            [options]="rangeOptions"
+            [ngModel]="days()"
+            (ngModelChange)="onRangeChange($event)"
+            [ngModelOptions]="{ standalone: true }"
+            optionLabel="label"
+            optionValue="value"
+            [allowEmpty]="false"
+            size="small"
+            aria-label="Trend window"
+          ></p-selectbutton>
+          <p-button
+            [icon]="showTable() ? 'pi pi-chart-line' : 'pi pi-table'"
+            [label]="showTable() ? 'Chart' : 'Table'"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [pTooltip]="showTable() ? 'Show the chart' : 'Show the same data as a table'"
+            tooltipPosition="left"
+            (onClick)="toggleTable()"
+          ></p-button>
+        </div>
+      </header>
+
+      <!-- Legend is always present for two series: identity never rests on colour
+           matching alone. -->
+      <div class="tp-legend">
+        <span class="tp-legend__item">
+          <span class="tp-legend__key tp-legend__key--completed" aria-hidden="true"></span>
+          Completed
+        </span>
+        <span class="tp-legend__item">
+          <span class="tp-legend__key tp-legend__key--created" aria-hidden="true"></span>
+          Created
+        </span>
+      </div>
+
+      @if (showTable()) {
+        <div class="tp-table-wrap">
+          <table class="tp-data-table">
+            <caption class="tp-sr-only">
+              Tasks created and completed per day over the last {{ days() }} days
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Day</th>
+                <th scope="col" class="tp-num">Completed</th>
+                <th scope="col" class="tp-num">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (point of chart().points; track point.date) {
+                <tr>
+                  <th scope="row">{{ asDate(point.date) | date: 'EEE d MMM' }}</th>
+                  <td class="tp-num">{{ point.completed }}</td>
+                  <td class="tp-num">{{ point.created }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <figure class="tp-chart">
+          <svg
+            class="tp-chart__svg"
+            [attr.viewBox]="'0 0 ' + chartGeometry.width + ' ' + chartGeometry.height"
+            role="img"
+            [attr.aria-label]="
+              'Line chart of tasks created and completed per day over the last ' +
+              days() + ' days. Use the table view for the exact figures.'
+            "
+            (mouseleave)="onPlotLeave()"
+          >
+            <!-- Gridlines: hairline, solid, one step off the surface. Recessive. -->
+            @for (line of chart().gridLines; track line.y) {
+              <line
+                class="tp-chart__grid"
+                [attr.x1]="chartGeometry.padLeft"
+                [attr.x2]="chartGeometry.padLeft + plotWidth"
+                [attr.y1]="line.y"
+                [attr.y2]="line.y"
+                vector-effect="non-scaling-stroke"
+              ></line>
+              <text
+                class="tp-chart__tick"
+                [attr.x]="chartGeometry.padLeft - 8"
+                [attr.y]="line.y + 4"
+                text-anchor="end"
+              >{{ line.label }}</text>
+            }
+
+            @for (label of chart().xLabels; track label.x) {
+              <text
+                class="tp-chart__tick"
+                [attr.x]="label.x"
+                [attr.y]="chartGeometry.height - 8"
+                text-anchor="middle"
+              >{{ label.label }}</text>
+            }
+
+            @if (chart().hasData) {
+              <!-- Crosshair sits under the marks so it never obscures them. -->
+              @if (hoveredPoint(); as hovered) {
+                <line
+                  class="tp-chart__crosshair"
+                  [attr.x1]="hovered.x"
+                  [attr.x2]="hovered.x"
+                  [attr.y1]="chartGeometry.padTop"
+                  [attr.y2]="chartGeometry.padTop + plotHeight"
+                  vector-effect="non-scaling-stroke"
+                ></line>
+              }
+
+              <path
+                class="tp-chart__line tp-chart__line--created"
+                [attr.d]="chart().createdPath"
+                vector-effect="non-scaling-stroke"
+              ></path>
+              <path
+                class="tp-chart__line tp-chart__line--completed"
+                [attr.d]="chart().completedPath"
+                vector-effect="non-scaling-stroke"
+              ></path>
+
+              <!-- End markers only. A dot on every point would be 60 marks of noise;
+                   the hover layer covers the rest. -->
+              @if (chart().points.length > 0) {
+                @let last = chart().points[chart().points.length - 1];
+                <circle
+                  class="tp-chart__dot tp-chart__dot--created"
+                  [attr.cx]="last.x"
+                  [attr.cy]="last.yCreated"
+                  r="4.5"
+                ></circle>
+                <circle
+                  class="tp-chart__dot tp-chart__dot--completed"
+                  [attr.cx]="last.x"
+                  [attr.cy]="last.yCompleted"
+                  r="4.5"
+                ></circle>
+
+                <!-- Direct end-labels, one per series, in text ink rather than the
+                     series colour; the ringed dot beside them carries identity. -->
+                <text
+                  class="tp-chart__endlabel"
+                  [attr.x]="last.x + 12"
+                  [attr.y]="last.yCompleted + 4"
+                >{{ last.completed }}</text>
+                <text
+                  class="tp-chart__endlabel"
+                  [attr.x]="last.x + 12"
+                  [attr.y]="last.yCreated + 4"
+                >{{ last.created }}</text>
+              }
+
+              <!-- Hover bands: one per day, the full height of the plot. -->
+              @for (point of chart().points; track point.date; let i = $index) {
+                <rect
+                  class="tp-chart__hit"
+                  [attr.x]="hitStrip(i).x"
+                  [attr.width]="hitStrip(i).width"
+                  [attr.y]="chartGeometry.padTop"
+                  [attr.height]="plotHeight"
+                  (mouseenter)="onPointEnter(i)"
+                ></rect>
+              }
+
+              @if (hoveredPoint(); as hovered) {
+                <circle
+                  class="tp-chart__dot tp-chart__dot--completed"
+                  [attr.cx]="hovered.x"
+                  [attr.cy]="hovered.yCompleted"
+                  r="4.5"
+                ></circle>
+                <circle
+                  class="tp-chart__dot tp-chart__dot--created"
+                  [attr.cx]="hovered.x"
+                  [attr.cy]="hovered.yCreated"
+                  r="4.5"
+                ></circle>
+              }
+            } @else {
+              <text
+                class="tp-chart__empty"
+                [attr.x]="chartGeometry.padLeft + plotWidth / 2"
+                [attr.y]="chartGeometry.padTop + plotHeight / 2"
+                text-anchor="middle"
+              >No activity in this window</text>
+            }
+          </svg>
+
+          <!-- Tooltip is HTML, not SVG: real text wrapping and no font scaling. -->
+          @if (hoveredPoint(); as hovered) {
+            <div
+              class="tp-tip"
+              [class.tp-tip--flip]="tooltipAnchor().flip"
+              [style.left.%]="(hovered.x / chartGeometry.width) * 100"
+            >
+              <span class="tp-tip__date">{{ asDate(hovered.date) | date: 'EEE d MMM' }}</span>
+              <span class="tp-tip__row">
+                <span class="tp-legend__key tp-legend__key--completed" aria-hidden="true"></span>
+                Completed <strong>{{ hovered.completed }}</strong>
+              </span>
+              <span class="tp-tip__row">
+                <span class="tp-legend__key tp-legend__key--created" aria-hidden="true"></span>
+                Created <strong>{{ hovered.created }}</strong>
+              </span>
+            </div>
+          }
+        </figure>
+      }
+    </section>
+
+    <!-- Two magnitude breakdowns. One series each, so no legend and one hue. -->
+    <section class="tp-breakdowns">
+      <div class="tp-panel">
+        <header class="tp-panel__head">
+          <div class="tp-panel__titles">
+            <h2 class="tp-panel__title">Open work by priority</h2>
+            <p class="tp-panel__subtitle">Completed tasks are left out.</p>
+          </div>
+        </header>
+
+        @if (hasOpenTasks()) {
+          <ul class="tp-bars">
+            @for (row of priorityRows(); track row.label) {
+              <li class="tp-bars__row">
+                <span class="tp-bars__label">{{ row.label }}</span>
+                <span class="tp-bars__track">
+                  <span
+                    class="tp-bars__fill"
+                    [class.tp-bars__fill--zero]="row.value === 0"
+                    [style.width.%]="row.percent"
+                  ></span>
+                </span>
+                <span class="tp-bars__value">{{ row.value | number }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="tp-panel__empty">Nothing open. Everything is done.</p>
+        }
+      </div>
+
+      <div class="tp-panel">
+        <header class="tp-panel__head">
+          <div class="tp-panel__titles">
+            <h2 class="tp-panel__title">Busiest tags</h2>
+            <p class="tp-panel__subtitle">How many tasks carry each label.</p>
+          </div>
+        </header>
+
+        @if (tagRows().length > 0) {
+          <ul class="tp-bars">
+            @for (row of tagRows(); track row.label) {
+              <li class="tp-bars__row">
+                <!-- The chip carries the tag's identity in its own colour; the bar
+                     carries magnitude in the single chart hue. -->
+                <span
+                  class="tp-bars__chip"
+                  [style.background]="row.color"
+                  [style.color]="row.textColor"
+                >{{ row.label }}</span>
+                <span class="tp-bars__track">
+                  <span
+                    class="tp-bars__fill"
+                    [class.tp-bars__fill--zero]="row.value === 0"
+                    [style.width.%]="row.percent"
+                  ></span>
+                </span>
+                <span class="tp-bars__value">{{ row.value | number }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="tp-panel__empty">
+            No tags in use yet. Add some on the <a routerLink="/tags">Tags</a> screen.
+          </p>
+        }
+      </div>
+    </section>
+  }
+</main>

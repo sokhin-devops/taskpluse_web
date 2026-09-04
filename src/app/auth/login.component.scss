@@ -1,0 +1,152 @@
+/* =========================================================================
+   Sign-in screen
+   A single centred card on the page background, shown outside the app shell
+   (no top bar, no nav) so nothing suggests there is anything to browse yet.
+
+   Colours, radii and spacing come from the global tokens in src/styles.scss.
+
+   Sections
+     1. Page frame
+     2. Card
+     3. Heading
+     4. Mode toggle
+     5. Form fields
+     6. Responsive
+   ========================================================================= */
+
+:host {
+  display: block;
+}
+
+/* -- 1. Page frame -------------------------------------------------------- */
+
+.tp-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem 1.25rem;
+}
+
+/* -- 2. Card -------------------------------------------------------------- */
+
+.tp-auth__card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 25rem;
+  padding: 2rem;
+  border: 1px solid var(--tp-border);
+  border-radius: var(--tp-radius);
+  background: var(--tp-surface);
+  box-shadow: var(--tp-shadow);
+}
+
+/* -- 3. Heading ----------------------------------------------------------- */
+
+.tp-auth__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.tp-auth__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+
+  i {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+}
+
+.tp-auth__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--tp-text);
+}
+
+.tp-auth__subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--tp-text-muted);
+}
+
+:host ::ng-deep .tp-auth__notice {
+  width: 100%;
+}
+
+/* -- 4. Mode toggle ------------------------------------------------------- */
+
+/* Both segments share the width so the control does not resize as the labels
+   change length between the two modes. */
+:host ::ng-deep .tp-auth__modes {
+  display: flex;
+  width: 100%;
+}
+
+:host ::ng-deep .tp-auth__modes .p-togglebutton {
+  flex: 1 1 0;
+  justify-content: center;
+}
+
+/* -- 5. Form fields ------------------------------------------------------- */
+
+.tp-auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.tp-field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tp-text);
+}
+
+.tp-field__error {
+  font-size: 0.8125rem;
+  color: var(--p-red-500, #ef4444);
+}
+
+/* Occupies the same slot as .tp-field__error, so showing an error does not
+   shift the fields below it. */
+.tp-field__hint {
+  font-size: 0.8125rem;
+  color: var(--tp-text-subtle);
+}
+
+.tp-auth__form input.ng-invalid.ng-touched {
+  border-color: var(--p-red-400, #f87171);
+  transition: border-color var(--tp-transition);
+}
+
+/* -- 6. Responsive -------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .tp-auth {
+    align-items: flex-start;
+    padding: 1.5rem 1rem;
+  }
+
+  .tp-auth__card {
+    padding: 1.5rem;
+  }
+}

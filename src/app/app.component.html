@@ -1,16 +1,45 @@
-<header class="app-bar">
-  <div class="app-bar__inner">
-    <div class="wordmark">
-      <span class="wordmark__badge" aria-hidden="true">
-        <i class="pi pi-check-circle"></i>
-      </span>
-      <span class="wordmark__name">{{ appName }}</span>
-    </div>
-  </div>
-</header>
+@if (isAuthenticated()) {
+  <header class="app-bar">
+    <div class="app-bar__inner">
+      <a class="wordmark" routerLink="/dashboard" aria-label="TaskPulse home">
+        <span class="wordmark__badge" aria-hidden="true">
+          <i class="pi pi-check-circle"></i>
+        </span>
+        <span class="wordmark__name">{{ appName }}</span>
+      </a>
 
-<main class="app-main">
-  <div class="app-container">
+      <nav class="app-nav" aria-label="Main">
+        @for (link of navLinks; track link.path) {
+          <a
+            class="app-nav__link tp-transition"
+            [routerLink]="link.path"
+            routerLinkActive="app-nav__link--active"
+            [routerLinkActiveOptions]="{ exact: false }"
+          >
+            <i [class]="link.icon" aria-hidden="true"></i>
+            <span class="app-nav__label">{{ link.label }}</span>
+          </a>
+        }
+      </nav>
+
+      <div class="app-bar__account">
+        <button
+          type="button"
+          class="tp-avatar tp-transition"
+          (click)="accountPanel.toggle($event)"
+          [attr.aria-label]="'Account menu for ' + (user()?.displayName ?? 'your account')"
+          aria-haspopup="true"
+        >
+          {{ initials() }}
+        </button>
+        <p-menu #accountPanel [model]="accountMenu()" [popup]="true" appendTo="body"></p-menu>
+      </div>
+    </div>
+  </header>
+}
+
+<main class="app-main" [class.app-main--bare]="!isAuthenticated()">
+  <div class="app-container" [class.app-container--bare]="!isAuthenticated()">
     <router-outlet></router-outlet>
   </div>
 </main>

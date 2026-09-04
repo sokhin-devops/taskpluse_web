@@ -1,0 +1,402 @@
+/* =========================================================================
+   Kanban board
+   Three columns of draggable cards. Wider than the shell's reading column,
+   so the host overrides the container width for this screen.
+
+   Colours, radii and spacing come from the global tokens in src/styles.scss.
+
+   Sections
+     1. Page frame
+     2. Heading
+     3. Columns
+     4. Cards
+     5. Tag chips
+     6. Due date
+     7. Drag and drop feedback
+     8. Empty / error states
+     9. Responsive
+   ========================================================================= */
+
+:host {
+  display: block;
+}
+
+/* -- 1. Page frame -------------------------------------------------------
+   The board needs more room than the 960px reading column the shell sets, so
+   it widens its own container and keeps the shell's gutters.
+   ------------------------------------------------------------------------ */
+
+.tp-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* -- 2. Heading ----------------------------------------------------------- */
+
+.tp-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tp-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.tp-header__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--tp-text);
+}
+
+.tp-header__summary {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--tp-text-muted);
+}
+
+/* -- 3. Columns -----------------------------------------------------------
+   Equal-width tracks with min-width: 0 so a long card title cannot stretch
+   one column and squeeze the others.
+   ------------------------------------------------------------------------- */
+
+.tp-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  /* Stretch, not start: columns of equal height give the emptier ones a drop target
+     as big as the busiest one's. Letting each shrink to its contents makes "Done"
+     a sliver to aim at precisely when it is the column you most want to drag into. */
+  align-items: stretch;
+}
+
+/* Empty board: the columns are still shown, faded, behind the empty state so
+   the workflow is visible without competing with the call to action. */
+.tp-columns--muted {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.tp-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--tp-border);
+  border-radius: var(--tp-radius);
+  background: var(--tp-surface);
+  box-shadow: var(--tp-shadow);
+}
+
+.tp-column__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  border-bottom: 1px solid var(--tp-border);
+}
+
+.tp-column__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tp-text-muted);
+
+  i {
+    font-size: 0.875rem;
+    line-height: 1;
+  }
+}
+
+.tp-column__count {
+  margin-left: auto;
+  min-width: 1.5rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  background: var(--tp-bg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--tp-text-muted);
+}
+
+/* Fills the stretched column, so the whole card area is droppable. The min-height
+   still matters on mobile, where the columns stack and no longer share a height. */
+.tp-column__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-height: 6rem;
+  padding: 0.75rem;
+}
+
+.tp-column__empty {
+  margin: 0;
+  padding: 1.5rem 0.5rem;
+  border: 1px dashed var(--tp-border);
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: var(--tp-text-subtle);
+}
+
+/* -- 4. Cards ------------------------------------------------------------- */
+
+.tp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--tp-border);
+  border-radius: 0.625rem;
+  background: var(--tp-surface);
+  cursor: grab;
+
+  &:hover {
+    border-color: var(--p-primary-200);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.tp-card--skeleton {
+  gap: 0.5rem;
+  cursor: default;
+}
+
+.tp-card--done {
+  background: var(--tp-bg);
+}
+
+.tp-card--done .tp-card__title {
+  color: var(--tp-text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.tp-card--done .tp-chip {
+  opacity: 0.6;
+}
+
+.tp-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* The row actions stay out of the way until the card is hovered or something
+   inside it has focus, so a column of cards is not a wall of icons. Keyboard
+   users get them via :focus-within rather than never. */
+.tp-card__actions {
+  display: inline-flex;
+  gap: 0.125rem;
+  opacity: 0;
+  transition: opacity var(--tp-transition);
+}
+
+.tp-card:hover .tp-card__actions,
+.tp-card:focus-within .tp-card__actions {
+  opacity: 1;
+}
+
+.tp-card__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--tp-text);
+  overflow-wrap: anywhere;
+}
+
+.tp-card__description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--tp-text-muted);
+}
+
+/* -- 5. Tag chips ---------------------------------------------------------
+   Text colour is computed per chip for contrast against the tag's own colour
+   (readableTextOn in tag.model.ts), not fixed to white.
+   ------------------------------------------------------------------------- */
+
+.tp-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tp-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* -- 6. Due date ---------------------------------------------------------- */
+
+.tp-card__due {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  align-self: flex-start;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--tp-text-muted);
+
+  i {
+    font-size: 0.75rem;
+    line-height: 1;
+  }
+}
+
+/* Overdue and due-today are marked with weight as well as colour, so the cue
+   does not rely on hue alone. */
+.tp-card__due--overdue {
+  color: var(--p-red-600, #dc2626);
+  font-weight: 600;
+}
+
+.tp-card__due--today {
+  color: var(--p-amber-600, #d97706);
+  font-weight: 600;
+}
+
+/* -- 7. Drag and drop feedback -------------------------------------------- */
+
+/* The card following the cursor. */
+:host ::ng-deep .cdk-drag-preview {
+  box-sizing: border-box;
+  border-radius: 0.625rem;
+  box-shadow:
+    0 8px 24px rgba(16, 24, 40, 0.16),
+    0 2px 6px rgba(16, 24, 40, 0.08);
+  opacity: 0.95;
+}
+
+/* The gap left where the card will land. */
+.tp-card__placeholder {
+  min-height: 3.5rem;
+  border: 1px dashed var(--p-primary-300);
+  border-radius: 0.625rem;
+  background: var(--p-primary-50);
+}
+
+:host ::ng-deep .cdk-drag-animating {
+  transition: transform 180ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+:host ::ng-deep .tp-column__body.cdk-drop-list-dragging .tp-card:not(.cdk-drag-placeholder) {
+  transition: transform 180ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Highlights the column the cursor is currently over. */
+:host ::ng-deep .tp-column__body.cdk-drop-list-receiving {
+  background: var(--p-primary-50);
+  border-radius: 0 0 var(--tp-radius) var(--tp-radius);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host ::ng-deep .cdk-drag-animating,
+  :host ::ng-deep .tp-column__body.cdk-drop-list-dragging .tp-card:not(.cdk-drag-placeholder) {
+    transition: none;
+  }
+}
+
+/* -- 8. Empty / error states ---------------------------------------------- */
+
+.tp-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1.5rem;
+  border: 1px solid var(--tp-border);
+  border-radius: var(--tp-radius);
+  background: var(--tp-surface);
+  box-shadow: var(--tp-shadow);
+  text-align: center;
+}
+
+.tp-state__icon {
+  font-size: 2.25rem;
+  line-height: 1;
+  color: var(--p-primary-color);
+}
+
+.tp-state__icon--error {
+  color: var(--p-red-500, #ef4444);
+}
+
+.tp-state__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--tp-text);
+}
+
+.tp-state__text {
+  margin: 0 0 0.5rem;
+  max-width: 30rem;
+  color: var(--tp-text-muted);
+}
+
+:host ::ng-deep .tp-skeleton-sub {
+  margin-top: 0.25rem;
+}
+
+/* -- 9. Responsive -------------------------------------------------------
+   Below 900px the three columns stack. Dragging still works vertically, and
+   a horizontal scroller would make dropping into an off-screen column far
+   harder than scrolling to it.
+   ------------------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+  .tp-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .tp-column__body {
+    min-height: 4.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .tp-header__title {
+    font-size: 1.3125rem;
+  }
+
+  /* On a touch screen there is no hover, so the actions are always visible. */
+  .tp-card__actions {
+    opacity: 1;
+  }
+}

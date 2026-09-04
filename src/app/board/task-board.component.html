@@ -1,0 +1,179 @@
+<p-toast position="top-right"></p-toast>
+
+<p-confirmdialog
+  [style]="{ width: '28rem' }"
+  acceptButtonStyleClass="p-button-danger"
+  rejectButtonStyleClass="p-button-text p-button-secondary"
+></p-confirmdialog>
+
+<main class="tp-board">
+  <header class="tp-header">
+    <div class="tp-header__text">
+      <h1 class="tp-header__title">Board</h1>
+      <p class="tp-header__summary">{{ summary() }}</p>
+    </div>
+    <p-button label="New task" icon="pi pi-plus" (onClick)="openCreate('TODO')"></p-button>
+  </header>
+
+  @if (loading()) {
+    <div class="tp-columns">
+      @for (column of skeletonColumns; track column.status) {
+        <section class="tp-column">
+          <header class="tp-column__head">
+            <span class="tp-column__title">{{ column.label }}</span>
+          </header>
+          <div class="tp-column__body" aria-hidden="true">
+            @for (card of skeletonCards; track card) {
+              <div class="tp-card tp-card--skeleton">
+                <p-skeleton width="80%" height="1rem"></p-skeleton>
+                <p-skeleton width="45%" height="0.75rem" styleClass="tp-skeleton-sub"></p-skeleton>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  } @else if (loadFailed()) {
+    <div class="tp-state">
+      <i class="pi pi-exclamation-triangle tp-state__icon tp-state__icon--error" aria-hidden="true"></i>
+      <h2 class="tp-state__title">We couldn't load your board</h2>
+      <p class="tp-state__text">
+        The TaskPulse API did not respond. Check that it is running, then try again.
+      </p>
+      <p-button label="Try again" icon="pi pi-refresh" [outlined]="true" (onClick)="reload()"></p-button>
+    </div>
+  } @else {
+    @if (isEmpty()) {
+      <div class="tp-state">
+        <i class="pi pi-th-large tp-state__icon" aria-hidden="true"></i>
+        <h2 class="tp-state__title">Your board is empty</h2>
+        <p class="tp-state__text">
+          Add a task and it will appear in <strong>To do</strong>, ready to drag across as
+          you work on it.
+        </p>
+        <p-button label="Add task" icon="pi pi-plus" (onClick)="openCreate('TODO')"></p-button>
+      </div>
+    }
+
+    <!-- The columns stay mounted even when empty, so there is somewhere to drop a card
+         and so the workflow itself is visible before any task exists. -->
+    <div class="tp-columns" [class.tp-columns--muted]="isEmpty()">
+      @for (column of columns(); track column.status) {
+        <section class="tp-column" [attr.aria-label]="column.label + ' column'">
+          <header class="tp-column__head">
+            <span class="tp-column__title">
+              <i [class]="columnIcon(column.status)" aria-hidden="true"></i>
+              {{ column.label }}
+            </span>
+            <span class="tp-column__count">{{ column.total }}</span>
+            <p-button
+              icon="pi pi-plus"
+              [rounded]="true"
+              [text]="true"
+              size="small"
+              severity="secondary"
+              [pTooltip]="'Add a task to ' + column.label"
+              tooltipPosition="top"
+              [ariaLabel]="'Add a task to ' + column.label"
+              (onClick)="openCreate(column.status)"
+            ></p-button>
+          </header>
+
+          <div
+            class="tp-column__body"
+            cdkDropList
+            [id]="columnId(column.status)"
+            [cdkDropListData]="column.tasks"
+            [cdkDropListConnectedTo]="columnIds"
+            (cdkDropListDropped)="onDrop($event, column.status)"
+          >
+            @for (task of column.tasks; track task.id) {
+              <article
+                class="tp-card tp-transition"
+                [class.tp-card--done]="task.completed"
+                cdkDrag
+                [cdkDragData]="task"
+              >
+                <!-- Shown in place of the card while it is being dragged, so the column
+                     does not collapse and reflow under the cursor. -->
+                <div class="tp-card__placeholder" *cdkDragPlaceholder></div>
+
+                <div class="tp-card__top">
+                  <p-tag
+                    [severity]="prioritySeverityOf(task)"
+                    [value]="task.priorityLabel"
+                    [icon]="priorityIconOf(task)"
+                    [rounded]="true"
+                  ></p-tag>
+                  <div class="tp-card__actions">
+                    <p-button
+                      icon="pi pi-pencil"
+                      [rounded]="true"
+                      [text]="true"
+                      size="small"
+                      severity="secondary"
+                      pTooltip="Edit task"
+                      tooltipPosition="top"
+                      ariaLabel="Edit task"
+                      (onClick)="openEdit(task)"
+                    ></p-button>
+                    <p-button
+                      icon="pi pi-trash"
+                      [rounded]="true"
+                      [text]="true"
+                      size="small"
+                      severity="danger"
+                      pTooltip="Delete task"
+                      tooltipPosition="top"
+                      ariaLabel="Delete task"
+                      (onClick)="onDelete(task)"
+                    ></p-button>
+                  </div>
+                </div>
+
+                <h3 class="tp-card__title">{{ task.title }}</h3>
+
+                @if (task.description) {
+                  <p class="tp-card__description">{{ task.description }}</p>
+                }
+
+                @if (task.tags.length > 0) {
+                  <div class="tp-card__tags">
+                    @for (tag of task.tags; track tag.id) {
+                      <span
+                        class="tp-chip"
+                        [style.background]="tag.color"
+                        [style.color]="tagTextColor(tag)"
+                      >{{ tag.name }}</span>
+                    }
+                  </div>
+                }
+
+                @if (task.dueDate) {
+                  <div
+                    class="tp-card__due"
+                    [class]="dueClass(task)"
+                    [pTooltip]="dueTooltip(task)"
+                    tooltipPosition="top"
+                  >
+                    <i class="pi pi-calendar" aria-hidden="true"></i>
+                    <span>{{ asDate(task.dueDate) | date: 'MMM d' }}</span>
+                  </div>
+                }
+              </article>
+            } @empty {
+              <p class="tp-column__empty">Drop a task here</p>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  }
+</main>
+
+<app-task-form
+  [(visible)]="formVisible"
+  [task]="selectedTask"
+  [defaultStatus]="createInStatus"
+  (saved)="onSaved()"
+></app-task-form>
