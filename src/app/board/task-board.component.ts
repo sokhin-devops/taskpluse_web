@@ -13,10 +13,16 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { SkeletonModule } from 'primeng/skeleton';
-import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 
+import {
+  AmbientBadgeComponent,
+  AmbientCardComponent,
+  AmbientEmptyStateComponent,
+  AmbientPageComponent,
+  AmbientPageHeaderComponent
+} from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
 import { Tag, readableTextOn } from '../core/tag.model';
 import { TagService } from '../core/tag.service';
@@ -59,10 +65,14 @@ const COLUMN_LABELS: Record<TaskStatus, string> = {
     ButtonModule,
     ConfirmDialogModule,
     SkeletonModule,
-    TagModule,
     ToastModule,
     TooltipModule,
-    TaskFormComponent
+    TaskFormComponent,
+    AmbientBadgeComponent,
+    AmbientCardComponent,
+    AmbientEmptyStateComponent,
+    AmbientPageComponent,
+    AmbientPageHeaderComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './task-board.component.html',
@@ -271,9 +281,9 @@ export class TaskBoardComponent implements OnInit {
       return '';
     }
     if (task.overdue) {
-      return 'tp-card__due--overdue';
+      return 'board-card__due--overdue';
     }
-    return this.isDueToday(task) ? 'tp-card__due--today' : '';
+    return this.isDueToday(task) ? 'board-card__due--today' : '';
   }
 
   dueTooltip(task: Task): string {

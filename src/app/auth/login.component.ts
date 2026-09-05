@@ -18,6 +18,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToastModule } from 'primeng/toast';
 import { Observable, finalize } from 'rxjs';
 
+import { AmbientFormFieldComponent, AmbientInputDirective } from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
 import { AuthResponse, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../core/auth/auth.model';
 import { AuthService } from '../core/auth/auth.service';
@@ -52,7 +53,9 @@ function notBlank(control: AbstractControl): ValidationErrors | null {
     MessageModule,
     PasswordModule,
     SelectButtonModule,
-    ToastModule
+    ToastModule,
+    AmbientFormFieldComponent,
+    AmbientInputDirective
   ],
   providers: [MessageService],
   templateUrl: './login.component.html',
@@ -118,16 +121,61 @@ export class LoginComponent implements OnInit {
     this.mode.set(mode);
   }
 
+  /** The register form's standing hint, shown while the field has no error. */
+  readonly passwordHint = `${MIN_PASSWORD_LENGTH}–${MAX_PASSWORD_LENGTH} characters.`;
+
+  loginEmailError(): string | undefined {
+    return this.errorFor(this.loginForm.controls.email, { required: 'Email is required.' });
+  }
+
+  loginPasswordError(): string | undefined {
+    return this.errorFor(this.loginForm.controls.password, { required: 'Password is required.' });
+  }
+
+  registerNameError(): string | undefined {
+    return this.errorFor(this.registerForm.controls.displayName, {
+      required: 'Your name is required.',
+      maxlength: 'Name cannot be longer than 100 characters.'
+    });
+  }
+
+  registerEmailError(): string | undefined {
+    return this.errorFor(this.registerForm.controls.email, {
+      required: 'Email is required.',
+      email: 'Enter a valid email address.',
+      maxlength: 'Email cannot be longer than 190 characters.'
+    });
+  }
+
+  registerPasswordError(): string | undefined {
+    return this.errorFor(this.registerForm.controls.password, {
+      required: 'Password is required.',
+      minlength: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+      maxlength: `Password cannot be longer than ${MAX_PASSWORD_LENGTH} characters.`
+    });
+  }
+
   /**
-   * True once a field has been touched and is invalid, so errors appear after typing
-   * rather than greeting the user on an untouched form.
+   * The message for the first failing validator, or nothing while the field is
+   * valid or has not been touched.
    *
-   * <p>Takes the control itself rather than a form name and a field name: with typed
-   * forms, a string lookup would have to widen the return type back to
-   * {@code AbstractControl} and give up the checking that makes them worth using.</p>
+   * <p>Waiting for {@code touched} is what keeps an untouched form from greeting
+   * the user with three errors they have not had a chance to cause yet.</p>
+   *
+   * <p>Takes the control itself rather than a form name and a field name: with
+   * typed forms, a string lookup would have to widen the return type back to
+   * {@code AbstractControl} and give up the checking that makes them worth
+   * using.</p>
    */
-  showError(control: AbstractControl): boolean {
-    return control.invalid && control.touched;
+  private errorFor(
+    control: AbstractControl,
+    messages: Record<string, string>
+  ): string | undefined {
+    if (control.valid || !control.touched) {
+      return undefined;
+    }
+    // Declaration order, so `required` wins over `minlength` on an empty field.
+    return Object.entries(messages).find(([key]) => control.hasError(key))?.[1];
   }
 
   onSubmitLogin(): void {

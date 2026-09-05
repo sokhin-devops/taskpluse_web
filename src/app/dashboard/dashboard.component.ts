@@ -11,6 +11,15 @@ import { ToastModule } from 'primeng/toast';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { TooltipModule } from 'primeng/tooltip';
 
+import {
+  AmbientActionsDirective,
+  AmbientBadgeComponent,
+  AmbientCardComponent,
+  AmbientEmptyStateComponent,
+  AmbientPageComponent,
+  AmbientPageHeaderComponent,
+  AmbientStatCardComponent
+} from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
 import { readableTextOn } from '../core/tag.model';
 import { TaskStats, toDate } from '../core/task.model';
@@ -121,7 +130,14 @@ const MAX_X_LABELS = 7;
     SkeletonModule,
     ToastModule,
     ToggleButtonModule,
-    TooltipModule
+    TooltipModule,
+    AmbientActionsDirective,
+    AmbientBadgeComponent,
+    AmbientCardComponent,
+    AmbientEmptyStateComponent,
+    AmbientPageComponent,
+    AmbientPageHeaderComponent,
+    AmbientStatCardComponent
   ],
   providers: [MessageService],
   templateUrl: './dashboard.component.html',

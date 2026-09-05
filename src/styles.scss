@@ -1,146 +1,34 @@
-/* =========================================================================
-   TaskPulse — global design layer
-   Loaded after primeicons.css and primeflex.css (both wired in angular.json;
-   do NOT re-import them here).
+// =========================================================================
+// TaskPulse — global stylesheet
+//
+// The one place the Ambient design system is emitted. Loaded after
+// primeicons.css and primeflex.css, both of which are wired in angular.json;
+// do not re-import them here.
+//
+// Order matters, and it is the cascade order the layers were designed for:
+//
+//   1. tokens       the custom properties everything else reads
+//   2. base         reset, document, type scale, keyframes
+//   3. background   the fixed ambient canvas
+//   4. glass        surface classes built from the mixins
+//   5. layout       the shell and the page scaffolding
+//   6. components   the PrimeNG layer — last, so it can override the rest
+//
+// PrimeNG's own theme is not here. It is generated at runtime from the preset
+// in `src/app/ambient/ambient.preset.ts` and injected into the document head
+// *after* this stylesheet, which is why a `--p-*` override written here would
+// silently lose the cascade. The preset points those tokens at the `--amb-*`
+// properties declared below, so this file remains the single source of truth
+// for what the product looks like even though PrimeNG paints half of it.
+//
+// Nothing else belongs in this file. A screen's styles go in that screen's
+// component stylesheet; a reusable one goes in the Ambient layer under
+// `src/styles/ambient/` or `src/app/ambient/`.
+// =========================================================================
 
-   Sections
-     1. Font
-     2. Accent palette (where it lives, and why not here)
-     3. Neutral tokens
-     4. Base elements
-     5. Type scale
-     6. Motion
-   ========================================================================= */
-
-/* -- 1. Font -------------------------------------------------------------- */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-:root {
-  --tp-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-
-  /* Hand the same stack to PrimeNG so components match the shell. */
-  --p-font-family: var(--tp-font-family);
-}
-
-/* -- 2. Accent palette ----------------------------------------------------
-   The indigo accent lives in app.config.ts, not here.
-
-   PrimeNG generates its theme at runtime and injects it into the document head
-   after this stylesheet, so redeclaring --p-primary-* on :root loses the cascade
-   and leaves the app on Aura's default emerald. Extending the preset with
-   definePreset is the only place the override actually takes.
-   -------------------------------------------------------------------------- */
-
-/* -- 3. Neutral tokens ---------------------------------------------------- */
-
-:root {
-  --tp-bg: #f6f7fb;
-  --tp-surface: #ffffff;
-  --tp-border: #e5e7eb;
-
-  --tp-text: #1f2430;
-  --tp-text-muted: #6b7280;
-  --tp-text-subtle: #9ca3af;
-
-  --tp-radius: 12px;
-  --tp-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
-
-  --tp-container-width: 960px;
-  --tp-transition: 180ms ease;
-}
-
-/* -- 4. Base elements ----------------------------------------------------- */
-
-* {
-  box-sizing: border-box;
-}
-
-/* The document is pinned to the viewport so it can never scroll itself. The app
-   shell owns the only scroll container (.app-main), which is what puts the
-   scrollbar beside the content instead of down the edge of the window. */
-html,
-body {
-  height: 100%;
-  overflow: hidden;
-}
-
-html {
-  font-family: var(--tp-font-family);
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  margin: 0;
-  font-family: var(--tp-font-family);
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  color: var(--tp-text);
-  background-color: var(--tp-bg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  color: var(--p-primary-color);
-  text-decoration: none;
-  transition: color var(--tp-transition);
-}
-
-a:hover {
-  color: var(--p-primary-hover-color);
-  text-decoration: underline;
-}
-
-/* -- 5. Type scale --------------------------------------------------------
-   Three reusable steps. Components should use these instead of inventing
-   their own font sizes.
-   -------------------------------------------------------------------------- */
-
-.tp-page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  color: var(--tp-text);
-}
-
-.tp-section-label {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tp-text-subtle);
-}
-
-.tp-body {
-  font-size: 0.9375rem;
-  font-weight: 400;
-  line-height: 1.55;
-  color: var(--tp-text);
-}
-
-.tp-muted {
-  color: var(--tp-text-muted);
-}
-
-/* -- 6. Motion ------------------------------------------------------------
-   A single opt-in helper for subtle state changes. PrimeNG supplies the rest
-   through its own built-in transitions.
-   -------------------------------------------------------------------------- */
-
-.tp-transition {
-  transition: background-color var(--tp-transition), color var(--tp-transition),
-    border-color var(--tp-transition), box-shadow var(--tp-transition),
-    opacity var(--tp-transition);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tp-transition {
-    transition: none;
-  }
-}
+@use 'styles/ambient/ambient-tokens';
+@use 'styles/ambient/ambient-base';
+@use 'styles/ambient/ambient-background';
+@use 'styles/ambient/ambient-glass';
+@use 'styles/ambient/ambient-layout';
+@use 'styles/ambient/ambient-components';

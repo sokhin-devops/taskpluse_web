@@ -1,0 +1,140 @@
+// =========================================================================
+// Ambient UI — accent palettes
+//
+// Six full ramps, one of which is live at a time. `<html data-amb-accent="…">`
+// selects it, so re-theming the entire product — every button, focus ring, link,
+// active nav item, chart highlight and glass tint — is one attribute, with no
+// stylesheet swap and no reload.
+//
+// It works because nothing in the system paints with a hex. Everything reads
+// `--amb-accent*`, including PrimeNG: `ambient.preset.ts` points PrimeNG's own
+// `primary` ramp at these custom properties, so PrimeNG follows the attribute
+// too.
+//
+// Each palette declares four things beyond its ramp, and they are where the
+// accessibility work lives:
+//
+//   light / light-hover   the step used as *the* accent in light mode, and its
+//                         hover. Not always 600: white text on teal-600 is
+//                         3.9:1, so teal and emerald use 700, which clears 4.5:1.
+//   dark / dark-hover     the step used in dark mode. Always lighter — a 600 on
+//                         a near-black canvas is a smudge.
+//   *-rgb                 the same colour as a channel triplet, so alpha tints
+//                         can be mixed inline as `rgb(var(--amb-accent-rgb) / a)`
+//                         without re-stating the hue.
+//   on-soft               what to write *on* one of those tints. 700 in light,
+//                         300 in dark; using 700 in both is the single most
+//                         common way a themeable palette breaks in dark mode.
+//
+// To add a palette: add an entry here, then add its name to `AMBIENT_ACCENTS`
+// in `ambient-theme.service.ts`. Nothing else needs to know.
+// =========================================================================
+
+@use 'sass:map';
+
+$amb-accent-palettes: (
+  'indigo': (
+    ramp: (
+      50: #eef2ff, 100: #e0e7ff, 200: #c7d2fe, 300: #a5b4fc, 400: #818cf8,
+      500: #6366f1, 600: #4f46e5, 700: #4338ca, 800: #3730a3, 900: #312e81,
+      950: #1e1b4b
+    ),
+    light: 600, light-hover: 700, light-rgb: '79 70 229',
+    dark: 400, dark-hover: 300, dark-rgb: '129 140 248'
+  ),
+  'violet': (
+    ramp: (
+      50: #f5f3ff, 100: #ede9fe, 200: #ddd6fe, 300: #c4b5fd, 400: #a78bfa,
+      500: #8b5cf6, 600: #7c3aed, 700: #6d28d9, 800: #5b21b6, 900: #4c1d95,
+      950: #2e1065
+    ),
+    light: 600, light-hover: 700, light-rgb: '124 58 237',
+    dark: 400, dark-hover: 300, dark-rgb: '167 139 250'
+  ),
+  'blue': (
+    ramp: (
+      50: #eff6ff, 100: #dbeafe, 200: #bfdbfe, 300: #93c5fd, 400: #60a5fa,
+      500: #3b82f6, 600: #2563eb, 700: #1d4ed8, 800: #1e40af, 900: #1e3a8a,
+      950: #172554
+    ),
+    light: 600, light-hover: 700, light-rgb: '37 99 235',
+    dark: 400, dark-hover: 300, dark-rgb: '96 165 250'
+  ),
+  // 700 rather than 600: white on teal-600 is 3.9:1, which fails on a button
+  // label. 700 clears 4.5:1 without the hue reading as a different colour.
+  'teal': (
+    ramp: (
+      50: #f0fdfa, 100: #ccfbf1, 200: #99f6e4, 300: #5eead4, 400: #2dd4bf,
+      500: #14b8a6, 600: #0d9488, 700: #0f766e, 800: #115e59, 900: #134e4a,
+      950: #042f2e
+    ),
+    light: 700, light-hover: 800, light-rgb: '15 118 110',
+    dark: 400, dark-hover: 300, dark-rgb: '45 212 191'
+  ),
+  'emerald': (
+    ramp: (
+      50: #ecfdf5, 100: #d1fae5, 200: #a7f3d0, 300: #6ee7b7, 400: #34d399,
+      500: #10b981, 600: #059669, 700: #047857, 800: #065f46, 900: #064e3b,
+      950: #022c22
+    ),
+    light: 700, light-hover: 800, light-rgb: '4 120 87',
+    dark: 400, dark-hover: 300, dark-rgb: '52 211 153'
+  ),
+  'rose': (
+    ramp: (
+      50: #fff1f2, 100: #ffe4e6, 200: #fecdd3, 300: #fda4af, 400: #fb7185,
+      500: #f43f5e, 600: #e11d48, 700: #be123c, 800: #9f1239, 900: #881337,
+      950: #4c0519
+    ),
+    light: 600, light-hover: 700, light-rgb: '225 29 72',
+    dark: 400, dark-hover: 300, dark-rgb: '251 113 133'
+  )
+);
+
+/// The palette used when nothing has chosen one — before the bootstrap script
+/// runs, and if `data-amb-accent` is ever removed.
+$amb-accent-default: 'indigo';
+
+/// Emits one palette's custom properties into whatever rule it is called in.
+@mixin accent-palette($name) {
+  $palette: map.get($amb-accent-palettes, $name);
+
+  @each $step, $hex in map.get($palette, 'ramp') {
+    --amb-accent-#{$step}: #{$hex};
+  }
+
+  // Which step this palette nominates for each scheme. The scheme blocks in
+  // `_ambient-tokens.scss` read these rather than naming a step themselves,
+  // which is what lets teal choose 700 where indigo chooses 600.
+  --amb-accent-light: var(--amb-accent-#{map.get($palette, 'light')});
+  --amb-accent-light-hover: var(--amb-accent-#{map.get($palette, 'light-hover')});
+  --amb-accent-light-rgb: #{map.get($palette, 'light-rgb')};
+  --amb-accent-on-soft-light: var(--amb-accent-#{map.get($palette, 'light-hover')});
+
+  --amb-accent-dark: var(--amb-accent-#{map.get($palette, 'dark')});
+  --amb-accent-dark-hover: var(--amb-accent-#{map.get($palette, 'dark-hover')});
+  --amb-accent-dark-rgb: #{map.get($palette, 'dark-rgb')};
+  --amb-accent-on-soft-dark: var(--amb-accent-#{map.get($palette, 'dark')});
+}
+
+/// Emits every palette: the default on bare `:root`, then one attribute-scoped
+/// block each. The attribute blocks are more specific, so whichever is selected
+/// wins over the default without `!important` or source-order games.
+@mixin accent-palettes {
+  :root {
+    @include accent-palette($amb-accent-default);
+  }
+
+  // Not scoped to `:root`, deliberately. The same attribute on any element
+  // re-points the accent for that subtree, which is what lets each swatch in the
+  // theme picker paint itself in the palette it applies — one mechanism, not a
+  // second hard-coded list of hexes that can drift out of step.
+  //
+  // Specificity ties with the `:root` default above (both 0,1,0), so these win
+  // on source order. That is why they are emitted second.
+  @each $name, $palette in $amb-accent-palettes {
+    [data-amb-accent='#{$name}'] {
+      @include accent-palette($name);
+    }
+  }
+}

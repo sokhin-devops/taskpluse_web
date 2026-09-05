@@ -1,0 +1,400 @@
+// =========================================================================
+// Ambient UI — base layer
+//
+// The reset, the document, the type scale and the handful of global keyframes.
+// Everything here is unconditional: it applies to the document rather than to
+// any component, and nothing in it needs a class to take effect.
+//
+// This file owns no colour, radius, spacing or duration of its own. Every value
+// is a token from `_ambient-tokens.scss`.
+//
+// Sections
+//   1. Font
+//   2. Reset
+//   3. Document
+//   4. Scrollbars
+//   5. Selection and focus
+//   6. Type scale
+//   7. Keyframes
+//   8. Utilities
+// =========================================================================
+
+@use 'ambient-mixins' as m;
+
+// -- 1. Font ---------------------------------------------------------------
+//
+// Inter, in the four weights the type scale actually uses. `display=swap` so a
+// slow font never blanks the interface.
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+// -- 2. Reset --------------------------------------------------------------
+//
+// The cascade contract for the whole application, declared here because this is
+// the first stylesheet that emits anything.
+//
+//   @layer amb-reset   this reset — the weakest thing in the product
+//   @layer primeng     everything PrimeNG generates (see `cssLayer` in
+//                      app.config.ts, which must name the same two layers)
+//   unlayered          the Ambient layer and every component stylesheet
+//
+// Two problems disappear at once. PrimeNG appends its generated styles to the
+// end of <head>, after styles.css, so without this an ambient rule at the same
+// specificity as a PrimeNG one silently loses — and there are dozens of those.
+// And a bare-element reset like `button { font: inherit }`, which is unlayered
+// and therefore now *stronger* than PrimeNG, would quietly undo `.p-button-sm`'s
+// font size; putting the reset in the lowest layer is what stops it.
+//
+// Nothing else in the system is layered. If a rule needs to beat PrimeNG, it
+// already does.
+
+@layer amb-reset, primeng;
+
+@layer amb-reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  // Headings and paragraphs take their spacing from the layout that contains
+  // them, never from their own margins. Removing it here is what makes a card's
+  // padding the only thing deciding where its title sits.
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  figure,
+  blockquote,
+  dl,
+  dd {
+    margin: 0;
+  }
+
+  // A control should inherit the interface font. Left to the user agent it
+  // falls back to the system default and every button in the product is
+  // off-family. PrimeNG's own sizing still wins: it is in a higher layer.
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    display: block;
+    max-width: 100%;
+  }
+
+  // The router outlet is a marker, not a box. Left visible it becomes a flex or
+  // grid item of whatever contains it and takes a share of the space meant for
+  // the screen rendered beside it.
+  router-outlet {
+    display: none;
+  }
+}
+
+// An opt-in class rather than a reset, so it only strips the list that asked.
+.amb-list-reset {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// -- 3. Document -----------------------------------------------------------
+//
+// The document is pinned to the viewport and never scrolls itself. The shell
+// owns the only scroll container, which is what puts the scrollbar beside the
+// content column instead of down the edge of the window.
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html {
+  font-family: var(--amb-font-family);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--amb-font-family);
+  font-size: var(--amb-text-md);
+  font-weight: var(--amb-weight-normal);
+  line-height: var(--amb-leading-normal);
+  letter-spacing: var(--amb-tracking-snug);
+  color: var(--amb-text);
+
+  // The flat ground beneath the ambient canvas. The canvas itself is a fixed
+  // element rendered by `<amb-background>`; this is what shows in the moment
+  // before it paints, and behind it if it is ever removed.
+  background-color: var(--amb-canvas);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--amb-accent);
+  text-decoration: none;
+
+  @include m.transition-prop(color, var(--amb-duration-fast));
+
+  &:hover {
+    color: var(--amb-accent-hover);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  @include m.focusable;
+}
+
+// -- 4. Scrollbars ---------------------------------------------------------
+//
+// Thin, translucent and in the ink hue, so a scrollbar reads as part of the
+// ambient surface rather than as a slab of operating-system chrome dropped on
+// top of it. Firefox gets the standard properties; WebKit gets the prefixed
+// pseudo-elements, which are still the only way to reach the same result.
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--amb-scrollbar) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+// The transparent border plus `background-clip` is what makes the thumb read as
+// a narrow pill floating in the gutter rather than filling it.
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--amb-radius-pill);
+  background: var(--amb-scrollbar);
+  background-clip: content-box;
+
+  &:hover {
+    background: var(--amb-scrollbar-hover);
+    background-clip: content-box;
+  }
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+// -- 4b. Colour-scheme change ----------------------------------------------
+//
+// Switching between light and dark should read as the room changing, not as the
+// page reloading. This cross-fades the colours that actually differ.
+//
+// It is on for a quarter of a second and no longer. `AmbientThemeService` adds
+// the class immediately before flipping the scheme and removes it once the
+// transition is done, because leaving it on would make *every* hover on *every*
+// surface in the product fade — slower, and wrong: a hover should be immediate.
+//
+// The property list is deliberate. `all` would animate `backdrop-filter` and
+// `box-shadow` on hundreds of glass surfaces at once, which drops frames on
+// exactly the machines that can least afford it.
+
+// Guarded by the preference rather than relying on the global reduced-motion
+// reset below: this rule is `!important` and carries a class, so it would
+// otherwise outrank that reset and animate anyway for the one person who asked
+// most clearly not to be animated at.
+@media (prefers-reduced-motion: no-preference) {
+  .amb-scheme-changing,
+  .amb-scheme-changing *,
+  .amb-scheme-changing *::before,
+  .amb-scheme-changing *::after {
+    transition:
+      background-color 260ms var(--amb-ease),
+      border-color 260ms var(--amb-ease),
+      color 260ms var(--amb-ease),
+      fill 260ms var(--amb-ease),
+      stroke 260ms var(--amb-ease) !important;
+  }
+}
+
+// -- 5. Selection and focus ------------------------------------------------
+
+::selection {
+  background: rgb(var(--amb-accent-rgb) / 0.18);
+  color: var(--amb-text);
+}
+
+// The product's single focus indicator, applied to anything focusable that has
+// not asked for its own. Keyboard only: `:focus-visible` rather than `:focus`,
+// so a mouse click never leaves a ring behind.
+:focus-visible {
+  @include m.focus-ring;
+}
+
+// -- 6. Type scale ---------------------------------------------------------
+//
+// Each step is named for its role. A page picks one of these rather than
+// declaring a font size, which is what keeps headings the same size on screens
+// that were written months apart.
+
+.amb-page-title {
+  font-size: var(--amb-text-2xl);
+  font-weight: var(--amb-weight-semibold);
+  line-height: var(--amb-leading-tight);
+  letter-spacing: var(--amb-tracking-tight);
+  color: var(--amb-text);
+}
+
+.amb-page-subtitle {
+  font-size: var(--amb-text-md);
+  font-weight: var(--amb-weight-normal);
+  line-height: var(--amb-leading-snug);
+  color: var(--amb-text-muted);
+}
+
+.amb-section-title {
+  font-size: var(--amb-text-lg);
+  font-weight: var(--amb-weight-semibold);
+  line-height: var(--amb-leading-snug);
+  letter-spacing: var(--amb-tracking-snug);
+  color: var(--amb-text);
+}
+
+.amb-section-subtitle {
+  font-size: var(--amb-text-sm);
+  font-weight: var(--amb-weight-normal);
+  line-height: var(--amb-leading-snug);
+  color: var(--amb-text-muted);
+}
+
+.amb-eyebrow {
+  @include m.eyebrow;
+}
+
+.amb-figure {
+  @include m.figure;
+}
+
+.amb-body {
+  font-size: var(--amb-text-md);
+  line-height: var(--amb-leading-normal);
+  color: var(--amb-text);
+}
+
+.amb-muted {
+  color: var(--amb-text-muted);
+}
+
+.amb-subtle {
+  color: var(--amb-text-subtle);
+}
+
+// Numerals that change in place — a count, a total, a figure in a table cell —
+// are tabular so the column cannot shift sideways as the value updates.
+.amb-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-truncate {
+  @include m.truncate;
+}
+
+// -- 7. Keyframes ----------------------------------------------------------
+//
+// Declared once, globally. Keyframes ignore view encapsulation, so a component
+// stylesheet can reference these without redeclaring them — which is what
+// `enter()` and the skeleton shimmer rely on.
+
+@keyframes amb-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--amb-enter-distance, 6px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes amb-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+// The sweep across a loading placeholder. Slow and low-contrast on purpose: a
+// fast shimmer reads as an error state.
+@keyframes amb-shimmer {
+  from {
+    background-position: 180% 0;
+  }
+
+  to {
+    background-position: -180% 0;
+  }
+}
+
+// The ambient canvas's slow drift. One cycle is most of a minute and the travel
+// is a few percent of the viewport, so it is never something the eye tracks.
+@keyframes amb-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(2%, -3%, 0) scale(1.06);
+  }
+}
+
+// -- 8. Utilities ----------------------------------------------------------
+
+.amb-sr-only {
+  @include m.sr-only;
+}
+
+// Hidden from sight and from the accessibility tree but still laid out — used
+// where a component must keep its box while showing nothing, such as the table
+// that stays mounted underneath its own empty state.
+.amb-hidden {
+  visibility: hidden;
+}
+
+.amb-transition {
+  @include m.transition;
+}
+
+.amb-enter {
+  @include m.enter;
+}
+
+// A last-resort global: honour the reduced-motion preference even for animation
+// this system did not author, such as a PrimeNG enter transition.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

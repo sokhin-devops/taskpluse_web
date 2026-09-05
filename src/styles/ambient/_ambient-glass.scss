@@ -1,0 +1,209 @@
+// =========================================================================
+// Ambient UI — glass surfaces
+//
+// The class layer over `glass()` and friends in `_ambient-mixins.scss`. The
+// mixins are for component stylesheets; these classes are for markup that wants
+// a surface without a stylesheet of its own, and for the Ambient components to
+// compose from.
+//
+// The surface hierarchy, in the order it stacks:
+//
+//   .amb-bg          the ambient canvas          (see _ambient-background)
+//   .amb-surface-1   page chrome, large panels
+//   .amb-surface-2   cards and tiles
+//   .amb-surface-3   overlays: dialogs, menus, tooltips
+//   .amb-sunken      inputs, tracks, wells — cut into the surface above
+//
+// Blur only ever applies to a surface sitting directly on the canvas or on a
+// modal mask. `backdrop-filter` samples whatever is immediately behind the
+// element, so a glass card inside a glass panel blurs the panel rather than the
+// canvas and the result is flat grey. Nested surfaces use `.amb-surface--flat`,
+// which is tint and border only.
+//
+// Sections
+//   1. Surfaces
+//   2. Interaction
+//   3. Overlay
+//   4. Dividers and rules
+//   5. Accents and tints
+//   6. Elevation utilities
+// =========================================================================
+
+@use 'ambient-mixins' as m;
+
+// -- 1. Surfaces -----------------------------------------------------------
+
+.amb-surface-1 {
+  @include m.glass(1, var(--amb-radius-panel), var(--amb-shadow-sm));
+}
+
+.amb-surface-2 {
+  @include m.glass(2, var(--amb-radius-card), var(--amb-shadow-md));
+}
+
+.amb-surface-3 {
+  @include m.glass(3, var(--amb-radius-overlay), var(--amb-shadow-lg));
+}
+
+.amb-sunken {
+  @include m.glass-sunken;
+}
+
+// The opt-out from blur, for a surface nested inside another one. Applied on
+// top of any `.amb-surface-*`.
+.amb-surface--flat {
+  background-image: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+// The muted variant: a flat accent tint instead of glass. Used for a "done" or
+// otherwise inactive surface, where translucency would let the busy canvas read
+// through and make the muted thing louder than the active one beside it.
+.amb-surface--muted {
+  background-color: var(--amb-surface-muted);
+  background-image: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+// Content padding, in the three densities the system uses. Kept as separate
+// classes rather than baked into the surfaces so a card can carry its own
+// padding on an inner element — which is what a table inside a card needs.
+.amb-pad-card {
+  padding: var(--amb-pad-card);
+}
+
+.amb-pad-panel {
+  padding: var(--amb-pad-panel);
+}
+
+.amb-pad-compact {
+  padding: var(--amb-pad-compact);
+}
+
+// -- 2. Interaction --------------------------------------------------------
+
+// A surface that can be clicked: hover lift, accent edge, soft halo, focus ring
+// and the shared disabled treatment, all from one class.
+.amb-interactive {
+  @include m.interactive-surface;
+}
+
+// Hover without the surface: for a row or a list item that is already inside
+// one. No lift — a row that rises out of its table looks broken.
+.amb-hoverable {
+  cursor: pointer;
+
+  @include m.transition;
+
+  &:hover {
+    background: var(--amb-surface-hover);
+  }
+
+  @include m.focusable(-2px);
+}
+
+// -- 3. Overlay ------------------------------------------------------------
+
+// Everything that floats: dialogs, menus, select panels, popovers, tooltips.
+// One class so a floating thing has the same weight and the same corner whether
+// PrimeNG drew it or we did.
+.amb-overlay {
+  @include m.glass-overlay;
+}
+
+// The modal backdrop. Dark enough to separate the dialog from the page, blurred
+// enough that the page behind it stops asking to be read.
+.amb-mask {
+  background: var(--amb-mask);
+  -webkit-backdrop-filter: blur(var(--amb-blur-sm)) saturate(120%);
+  backdrop-filter: blur(var(--amb-blur-sm)) saturate(120%);
+}
+
+// -- 4. Dividers and rules -------------------------------------------------
+
+// A hairline that fades at both ends, so it reads as a seam in the glass rather
+// than a line ruled across it.
+.amb-divider {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--amb-border-strong) 12%,
+    var(--amb-border-strong) 88%,
+    transparent 100%
+  );
+}
+
+.amb-divider--vertical {
+  width: 1px;
+  height: auto;
+  align-self: stretch;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--amb-border-strong) 12%,
+    var(--amb-border-strong) 88%,
+    transparent 100%
+  );
+}
+
+// -- 5. Accents and tints --------------------------------------------------
+//
+// The four semantic tints, as one class each. Every one pairs its hue with a
+// border and is only ever used behind an icon or a label, so meaning never
+// rests on colour alone.
+
+.amb-tint-accent {
+  border: 1px solid var(--amb-border-accent);
+  background: var(--amb-accent-soft);
+  color: var(--amb-accent-on-soft);
+}
+
+.amb-tint-success {
+  border: 1px solid var(--amb-success-border);
+  background: var(--amb-success-soft);
+  color: var(--amb-success);
+}
+
+.amb-tint-warn {
+  border: 1px solid var(--amb-warn-border);
+  background: var(--amb-warn-soft);
+  color: var(--amb-warn);
+}
+
+.amb-tint-danger {
+  border: 1px solid var(--amb-danger-border);
+  background: var(--amb-danger-soft);
+  color: var(--amb-danger);
+}
+
+.amb-tint-info {
+  border: 1px solid var(--amb-info-border);
+  background: var(--amb-info-soft);
+  color: var(--amb-info);
+}
+
+// -- 6. Elevation utilities ------------------------------------------------
+//
+// For the rare case where a surface needs a step off the default its class
+// gives it — a sticky header lifting as content scrolls under it, say.
+
+.amb-elev-0 {
+  box-shadow: none;
+}
+
+.amb-elev-sm {
+  box-shadow: var(--amb-shadow-sm);
+}
+
+.amb-elev-md {
+  box-shadow: var(--amb-shadow-md);
+}
+
+.amb-elev-lg {
+  box-shadow: var(--amb-shadow-lg);
+}

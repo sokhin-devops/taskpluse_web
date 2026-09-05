@@ -1,0 +1,634 @@
+// =========================================================================
+// Ambient UI — design tokens
+//
+// The single source of truth for every visual decision in the application.
+// Nothing below this file should invent a colour, a radius, a shadow, a blur
+// radius or a duration: it should reference a token from here.
+//
+// Three kinds of token live in this file, and the splits are deliberate.
+//
+//   Sass variables (`$amb-*`) carry only what a custom property cannot do:
+//   breakpoints, which have to be literal inside `@media`, and the accent
+//   palettes, which are generated. Both are in their own modules and forwarded.
+//
+//   Scheme-independent custom properties are emitted once on `:root`: radius,
+//   spacing, type, motion, layering, layout. A number that means the same thing
+//   in light and dark has no business being declared twice.
+//
+//   Scheme-dependent custom properties are emitted twice — once on `:root` for
+//   light, once on `:root.amb-dark` for dark. Everything downstream reads the
+//   same token name either way, which is why adding dark mode did not touch a
+//   single component stylesheet.
+//
+// The `.amb-dark` class is written to `<html>` by `AmbientThemeService`, and by
+// the inline bootstrap script in `index.html` before first paint so the app
+// never flashes white on the way to dark. PrimeNG is told about the same class
+// through `darkModeSelector` in `ambient.preset.ts`; the three must agree.
+//
+// Sections
+//   1. Breakpoints and palettes (forwarded)
+//   2. Scheme-independent tokens
+//   3. Light scheme
+//   4. Dark scheme
+//   5. Capability and preference fallbacks
+// =========================================================================
+
+@use 'ambient-accents' as accents;
+
+// -- 1. Breakpoints and palettes -------------------------------------------
+//
+// Declared in their own modules and forwarded from here, so anything that
+// reaches for the tokens also has the breakpoints. The split exists because
+// those files emit no CSS and this one does — see their headers.
+
+@forward 'ambient-breakpoints';
+@forward 'ambient-accents';
+
+@include accents.accent-palettes;
+
+// -- 2. Scheme-independent tokens ------------------------------------------
+
+:root {
+  // -- Radius --------------------------------------------------------------
+  //
+  // One ramp. A component picks the step that matches its size, and nothing in
+  // the system rounds a corner to a number that is not on this list.
+
+  --amb-radius-xs: 6px;
+  --amb-radius-sm: 8px;
+  --amb-radius-md: 10px;
+  --amb-radius-lg: 14px;
+  --amb-radius-xl: 18px;
+  --amb-radius-2xl: 24px;
+  --amb-radius-pill: 999px;
+
+  // Named by role, so a page asks for "the card radius" rather than "14px".
+  // Changing the feel of every card in the product is one line here.
+  --amb-radius-field: var(--amb-radius-md);
+  --amb-radius-card: var(--amb-radius-lg);
+  --amb-radius-panel: var(--amb-radius-xl);
+  --amb-radius-overlay: var(--amb-radius-xl);
+
+  // -- Blur ----------------------------------------------------------------
+  //
+  // The saturation bump is what keeps a blurred backdrop from going grey:
+  // averaging a colourful area desaturates it, and pushing saturation back up
+  // is the difference between glass and frosted plastic.
+
+  --amb-blur-sm: 10px;
+  --amb-blur-md: 18px;
+  --amb-blur-lg: 26px;
+  --amb-blur-xl: 34px;
+  --amb-blur-saturate: 180%;
+
+  // The one recipe every glass surface uses. Kept as a token so raising the
+  // blur across the product is one edit rather than fifteen.
+  --amb-glass-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
+  --amb-glass-filter-overlay: blur(var(--amb-blur-xl)) saturate(var(--amb-blur-saturate));
+
+  // -- Spacing -------------------------------------------------------------
+  //
+  // A 4px scale. Component padding and layout gaps both come from here, which
+  // is what makes rhythm consistent across pages written separately.
+
+  --amb-space-0: 0;
+  --amb-space-1: 0.25rem; //  4px
+  --amb-space-2: 0.5rem; //   8px
+  --amb-space-3: 0.75rem; //  12px
+  --amb-space-4: 1rem; //     16px
+  --amb-space-5: 1.25rem; //  20px
+  --amb-space-6: 1.5rem; //   24px
+  --amb-space-7: 2rem; //     32px
+  --amb-space-8: 2.5rem; //   40px
+  --amb-space-9: 3rem; //     48px
+  --amb-space-10: 4rem; //    64px
+
+  // Named by role. `--amb-gap-section` is the vertical rhythm between the
+  // blocks of a page and is the one number that sets how spacious the product
+  // feels; `--amb-pad-card` does the same for density inside a surface.
+  --amb-gap-tight: var(--amb-space-2);
+  --amb-gap-inline: var(--amb-space-3);
+  --amb-gap-stack: var(--amb-space-4);
+  --amb-gap-grid: var(--amb-space-5);
+  --amb-gap-section: var(--amb-space-6);
+
+  --amb-pad-card: var(--amb-space-5);
+  --amb-pad-panel: var(--amb-space-6);
+  --amb-pad-compact: var(--amb-space-4);
+
+  // -- Typography ----------------------------------------------------------
+
+  --amb-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+
+  --amb-text-2xs: 0.6875rem; // 11px  chips
+  --amb-text-xs: 0.75rem; //    12px  eyebrow labels, axis ticks
+  --amb-text-sm: 0.8125rem; //  13px  secondary text, table meta
+  --amb-text-base: 0.875rem; // 14px  UI default
+  --amb-text-md: 0.9375rem; //  15px  body copy
+  --amb-text-lg: 1.0625rem; //  17px  card titles
+  --amb-text-xl: 1.25rem; //    20px  section titles
+  --amb-text-2xl: 1.625rem; //  26px  page titles
+  --amb-text-3xl: 2.25rem; //   36px  hero figures
+  --amb-text-4xl: 2.75rem; //   44px  the one lead number
+
+  --amb-leading-tight: 1.2;
+  --amb-leading-snug: 1.4;
+  --amb-leading-normal: 1.55;
+
+  --amb-weight-normal: 400;
+  --amb-weight-medium: 500;
+  --amb-weight-semibold: 600;
+  --amb-weight-bold: 700;
+
+  // Negative tracking on large type, positive on small caps. Both are what
+  // keeps headings from looking loose and eyebrow labels from looking cramped.
+  --amb-tracking-tight: -0.022em;
+  --amb-tracking-snug: -0.011em;
+  --amb-tracking-normal: 0;
+  --amb-tracking-wide: 0.045em;
+  --amb-tracking-wider: 0.08em;
+
+  // -- Motion --------------------------------------------------------------
+  //
+  // Everything lands inside the 150-300ms band, with one step above it for a
+  // surface arriving on screen — a card that fades in over 200ms reads as a
+  // flicker, and 380ms is still well short of feeling slow.
+
+  --amb-duration-fast: 150ms;
+  --amb-duration-base: 200ms;
+  --amb-duration-slow: 300ms;
+  --amb-duration-enter: 380ms;
+
+  // The standard curve, and a softer one that decelerates harder. Reserve the
+  // soft curve for something arriving; using it on a hover makes the hover feel
+  // like it is catching up with the cursor.
+  --amb-ease: cubic-bezier(0.32, 0.08, 0.24, 1);
+  --amb-ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+
+  // The composite transition almost every interactive surface wants. Note what
+  // is absent: no `all`, and no width or height, so a hover can never trigger
+  // layout.
+  --amb-transition: background-color var(--amb-duration-base) var(--amb-ease),
+    border-color var(--amb-duration-base) var(--amb-ease),
+    box-shadow var(--amb-duration-base) var(--amb-ease),
+    color var(--amb-duration-fast) var(--amb-ease),
+    opacity var(--amb-duration-fast) var(--amb-ease),
+    transform var(--amb-duration-base) var(--amb-ease);
+
+  // How far an interactive surface rises on hover. Small on purpose: 1px reads
+  // as responsive, 4px reads as a toy.
+  --amb-lift: -1px;
+
+  // -- Layering ------------------------------------------------------------
+  //
+  // The application's own stack, kept entirely below PrimeNG's overlay range
+  // (its menus and select panels sit at 1000, its modals at 1100) so a docked
+  // sidebar can never paint over an open dropdown.
+
+  --amb-z-canvas: 0;
+  --amb-z-base: 1;
+  --amb-z-raised: 2;
+  --amb-z-sticky: 100;
+  --amb-z-nav: 200;
+  --amb-z-drawer: 900;
+
+  // -- Layout metrics ------------------------------------------------------
+
+  --amb-sidebar-width: 15.5rem;
+  --amb-topbar-height: 3.75rem;
+
+  // The reading column. Wider than a plain prose measure because the shell
+  // spends horizontal space on the sidebar, and a narrow column beside it would
+  // leave the board's three columns cramped on a laptop.
+  --amb-content-width: 1180px;
+  --amb-content-width-narrow: 48rem;
+  --amb-gutter: var(--amb-space-6);
+}
+
+// -- 3. Light scheme --------------------------------------------------------
+
+:root {
+  // -- Accent --------------------------------------------------------------
+  //
+  // Which step of the live palette is *the* accent, and its hover. The palette
+  // nominates them (see `_ambient-accents.scss`), because the answer is not the
+  // same for every hue.
+
+  --amb-accent: var(--amb-accent-light);
+  --amb-accent-hover: var(--amb-accent-light-hover);
+  --amb-accent-rgb: var(--amb-accent-light-rgb);
+  --amb-accent-contrast: #ffffff;
+
+  // What to write on an accent *tint* rather than on the accent itself — an
+  // active nav item, a selected option, a primary chip. Never the same value in
+  // both schemes: 700 on a dark tint is unreadable.
+  --amb-accent-on-soft: var(--amb-accent-on-soft-light);
+
+  // The accent as a background, at the two strengths the system uses: a resting
+  // tint and its hover.
+  --amb-accent-soft: rgb(var(--amb-accent-rgb) / 0.1);
+  --amb-accent-soft-hover: rgb(var(--amb-accent-rgb) / 0.16);
+
+  // A second and third ambient hue. These never carry meaning — they exist only
+  // to give the background depth. Keeping them out of the semantic palette is
+  // what stops the UI drifting into "colourful".
+  --amb-ambient-violet-rgb: 129 90 240;
+  --amb-ambient-cyan-rgb: 56 160 220;
+
+  // -- Ambient canvas ------------------------------------------------------
+  //
+  // The environment the whole product sits inside: a cool near-white ground
+  // plus three very low-alpha radial glows.
+
+  --amb-canvas: #eef1f8;
+  --amb-canvas-deep: #e4e8f3;
+
+  --amb-glow-1: rgb(var(--amb-accent-rgb) / 0.16);
+  --amb-glow-2: rgb(var(--amb-ambient-violet-rgb) / 0.13);
+  --amb-glow-3: rgb(var(--amb-ambient-cyan-rgb) / 0.11);
+
+  // The colour the mesh and the vignette are drawn in — ink on light, light on
+  // dark — so the background texture flips with the scheme.
+  --amb-bg-mesh: rgb(22 27 46 / 0.03);
+  --amb-bg-sheen: rgb(255 255 255 / 0.62);
+  --amb-bg-vignette: rgb(22 27 46 / 0.05);
+
+  // -- Surfaces and glass --------------------------------------------------
+  //
+  // Four steps, in the order they stack. Each is the surface tint at an opacity
+  // over the canvas; the number in the name is depth, not lightness.
+  //
+  //   sunken   inputs, tracks, wells — reads as cut into the surface above it
+  //   1        page-level chrome and large panels
+  //   2        cards and tiles, the workhorse surface
+  //   3        overlays: dialogs, menus, select panels, tooltips
+  //
+  // Opacity climbs with depth so text contrast climbs with it too: an overlay
+  // sits over arbitrary content and cannot afford to be as transparent as a
+  // panel sitting over the known canvas.
+
+  --amb-surface-tint: 255 255 255;
+
+  --amb-glass-opacity-sunken: 0.46;
+  --amb-glass-opacity-1: 0.62;
+  --amb-glass-opacity-2: 0.74;
+  --amb-glass-opacity-3: 0.9;
+
+  --amb-surface-sunken: rgb(var(--amb-surface-tint) / var(--amb-glass-opacity-sunken));
+  --amb-surface-1: rgb(var(--amb-surface-tint) / var(--amb-glass-opacity-1));
+  --amb-surface-2: rgb(var(--amb-surface-tint) / var(--amb-glass-opacity-2));
+  --amb-surface-3: rgb(var(--amb-surface-tint) / var(--amb-glass-opacity-3));
+
+  // Opaque equivalent, for the places transparency is wrong: sticky table
+  // headers that scroll over their own rows, the ring around a chart marker,
+  // and a card being dragged out of the stack.
+  --amb-surface-solid: #ffffff;
+
+  // A flat tint one step down from the canvas. Used for a "done"/inactive
+  // surface, where translucency would let the busy canvas read through and make
+  // the muted thing louder than the active one beside it.
+  --amb-surface-muted: rgb(var(--amb-accent-rgb) / 0.05);
+
+  // Interaction tints for something already inside a surface: a table row, a
+  // menu option, a paginator page. Flat washes rather than a new glass layer,
+  // because a hover that changes the blur reads as the row moving.
+  --amb-surface-hover: rgb(var(--amb-accent-rgb) / 0.055);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.1);
+
+  // -- Glass edges ---------------------------------------------------------
+  //
+  // What actually makes a surface read as glass rather than as a translucent
+  // rectangle: a bright specular line along the lit edge, a hairline of the same
+  // light around the whole rim, and a faint sheen falling across the face.
+  //
+  // These are composed once into `--amb-glass-inset` so every surface — ours and
+  // PrimeNG's — gets an identical edge from one token.
+
+  --amb-highlight: rgb(255 255 255 / 0.85);
+  --amb-glass-edge: rgb(255 255 255 / 0.5);
+  --amb-glass-inset: inset 0 1px 0 0 var(--amb-highlight),
+    inset 0 0 0 1px var(--amb-glass-edge);
+  --amb-glass-sheen: linear-gradient(
+    155deg,
+    rgb(255 255 255 / 0.16) 0%,
+    rgb(255 255 255 / 0.04) 34%,
+    rgb(255 255 255 / 0) 62%
+  );
+
+  // -- Borders -------------------------------------------------------------
+  //
+  // Hairlines in the ink hue rather than grey: a neutral border over a tinted
+  // canvas reads as a dirty edge. Alpha rather than a solid colour so the border
+  // sits *in* the glass instead of on top of it.
+
+  --amb-border: rgb(22 27 46 / 0.08);
+  --amb-border-strong: rgb(22 27 46 / 0.13);
+  --amb-border-subtle: rgb(22 27 46 / 0.05);
+  --amb-border-accent: rgb(var(--amb-accent-rgb) / 0.32);
+  --amb-border-dashed: rgb(22 27 46 / 0.14);
+
+  // -- Text ----------------------------------------------------------------
+  //
+  // Measured against `--amb-surface-2` over `--amb-canvas`, which is the
+  // lightest ground any of these is used on:
+  //   text      15.1:1     subtle     4.6:1
+  //   muted      6.6:1     on-accent  8.0:1
+  // `--amb-text-subtle` clears 4.5:1, so it is safe for the small uppercase
+  // labels it is used for rather than merely decorative.
+
+  --amb-text: #151a2e;
+  --amb-text-muted: #565d75;
+  --amb-text-subtle: #6f7690;
+  --amb-text-on-accent: #ffffff;
+
+  // -- Feedback colour -----------------------------------------------------
+  //
+  // Semantic only. Every use is paired with an icon or a weight change so the
+  // meaning never rests on hue alone.
+
+  --amb-danger: #dc2626;
+  --amb-danger-strong: #b91c1c;
+  --amb-danger-soft: rgb(220 38 38 / 0.09);
+  --amb-danger-border: rgb(220 38 38 / 0.22);
+
+  --amb-warn: #b96806;
+  --amb-warn-soft: rgb(217 119 6 / 0.1);
+  --amb-warn-border: rgb(217 119 6 / 0.24);
+
+  --amb-success: #12805c;
+  --amb-success-soft: rgb(18 128 92 / 0.09);
+  --amb-success-border: rgb(18 128 92 / 0.2);
+
+  --amb-info: #1d63c9;
+  --amb-info-soft: rgb(29 99 201 / 0.09);
+  --amb-info-border: rgb(29 99 201 / 0.2);
+
+  // -- Data-visualisation colour -------------------------------------------
+  //
+  // A validated categorical pair. Checked for perceptual separation under
+  // simulated colour blindness and for contrast against `--amb-surface-2`.
+  // Slot 1 is the headline measure, slot 2 the single comparison series; the
+  // bars are one series, so they reuse slot 1 and carry no legend.
+  //
+  // Deliberately independent of the accent: a chart series that changed hue when
+  // the user picked a new theme colour would make two charts drawn a minute
+  // apart incomparable.
+
+  --amb-viz-1: #2a6fd6;
+  --amb-viz-2: #e0632c;
+  --amb-viz-track: rgb(42 111 214 / 0.14);
+  --amb-viz-track-soft: rgb(42 111 214 / 0.2);
+  --amb-viz-grid: rgb(22 27 46 / 0.08);
+
+  // -- Loading placeholders ------------------------------------------------
+  //
+  // A skeleton is a well with a sweep across it, so both colours have to flip:
+  // an ink-tinted placeholder is invisible on a dark canvas, and a bright white
+  // sweep on one reads as a flashbulb.
+
+  --amb-skeleton-base: rgb(22 27 46 / 0.07);
+  --amb-skeleton-sheen: rgb(255 255 255 / 0.55);
+
+  // -- Incidental chrome ---------------------------------------------------
+  //
+  // The scrollbar thumb, and the ring drawn around a colour swatch so a pale
+  // tag colour does not dissolve into the surface behind it. Both are hairlines
+  // in whatever the opposite of the canvas is, which is why they cannot be a
+  // fixed ink value.
+
+  --amb-scrollbar: rgb(22 27 46 / 0.18);
+  --amb-scrollbar-hover: rgb(22 27 46 / 0.3);
+  --amb-swatch-ring: rgb(22 27 46 / 0.12);
+
+  // -- Shadow and glow -----------------------------------------------------
+  //
+  // Tinted with the ink hue, never pure black: black over a cool canvas reads as
+  // grime. Each step is a close contact shadow plus a wide soft one, which is
+  // what reads as depth rather than as a drop shadow.
+
+  --amb-shadow-xs: 0 1px 2px rgb(20 26 48 / 0.05);
+  --amb-shadow-sm: 0 1px 2px rgb(20 26 48 / 0.05), 0 4px 12px -6px rgb(20 26 48 / 0.1);
+  --amb-shadow-md: 0 1px 2px rgb(20 26 48 / 0.05), 0 12px 30px -12px rgb(20 26 48 / 0.16);
+  --amb-shadow-lg: 0 2px 4px rgb(20 26 48 / 0.05), 0 22px 48px -16px rgb(20 26 48 / 0.2);
+  --amb-shadow-xl: 0 2px 6px rgb(20 26 48 / 0.07), 0 40px 80px -24px rgb(20 26 48 / 0.3);
+
+  // The accent halo. Used for hover on an interactive surface and, at a stronger
+  // alpha, for the focus ring.
+  --amb-glow-soft: 0 0 0 4px rgb(var(--amb-accent-rgb) / 0.12);
+  --amb-glow-focus: 0 0 0 3px rgb(var(--amb-accent-rgb) / 0.3);
+
+  // The tooltip, and any other surface that inverts. Kept as its own token
+  // because it is the one place in the product where the scheme is reversed.
+  --amb-inverse-surface: rgb(21 26 46 / 0.95);
+  --amb-inverse-text: #f4f5fa;
+
+  // The modal backdrop. Ink rather than black, and light enough that the page
+  // behind a dialog stays recognisable — the blur, not the darkness, is what
+  // stops it asking to be read.
+  --amb-mask: rgb(16 20 38 / 0.34);
+}
+
+// -- 4. Dark scheme ---------------------------------------------------------
+//
+// Only what actually changes. Radius, spacing, type, motion and layout are
+// declared once above and are not repeated here — a dark card is the same shape
+// as a light one.
+//
+// The class is written to `<html>`, so this block is `:root.amb-dark` and beats
+// the light block on specificity rather than on source order.
+
+:root.amb-dark {
+  --amb-accent: var(--amb-accent-dark);
+  --amb-accent-hover: var(--amb-accent-dark-hover);
+  --amb-accent-rgb: var(--amb-accent-dark-rgb);
+  // A light accent needs dark text on it, not white.
+  --amb-accent-contrast: #0a0d17;
+  --amb-accent-on-soft: var(--amb-accent-on-soft-dark);
+
+  // Tints have to be stronger on dark: the same 10% wash that reads clearly over
+  // white is nearly invisible over near-black.
+  --amb-accent-soft: rgb(var(--amb-accent-rgb) / 0.16);
+  --amb-accent-soft-hover: rgb(var(--amb-accent-rgb) / 0.24);
+
+  // -- Canvas --------------------------------------------------------------
+  //
+  // Deep blue-black rather than grey, so the glows read as light in a room
+  // rather than as stains on a slab.
+
+  --amb-canvas: #0a0d17;
+  --amb-canvas-deep: #05070e;
+
+  // Brighter than their light-mode counterparts. A 13% glow over near-black is
+  // invisible; the eye needs roughly twice the alpha to read the same shape.
+  --amb-glow-1: rgb(var(--amb-accent-rgb) / 0.26);
+  --amb-glow-2: rgb(var(--amb-ambient-violet-rgb) / 0.22);
+  --amb-glow-3: rgb(var(--amb-ambient-cyan-rgb) / 0.18);
+
+  --amb-bg-mesh: rgb(255 255 255 / 0.028);
+  --amb-bg-sheen: rgb(255 255 255 / 0.045);
+  --amb-bg-vignette: rgb(0 0 0 / 0.35);
+
+  // -- Surfaces ------------------------------------------------------------
+  //
+  // The tint flips from white to a lifted slate. Opacities are *lower* than in
+  // light mode: a dark surface at 74% over a dark canvas is nearly opaque and
+  // loses the glass entirely, whereas the same surface at 55% still shows the
+  // glow moving behind it.
+
+  --amb-surface-tint: 42 50 78;
+
+  --amb-glass-opacity-sunken: 0.34;
+  --amb-glass-opacity-1: 0.45;
+  --amb-glass-opacity-2: 0.55;
+  --amb-glass-opacity-3: 0.76;
+
+  --amb-surface-solid: #161c2e;
+  --amb-surface-muted: rgb(255 255 255 / 0.035);
+  --amb-surface-hover: rgb(255 255 255 / 0.05);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.16);
+
+  // -- Glass edges ---------------------------------------------------------
+  //
+  // Much subtler than in light mode. A bright rim on a dark surface reads as a
+  // neon outline; what is wanted is the suggestion of a lit edge.
+
+  --amb-highlight: rgb(255 255 255 / 0.16);
+  --amb-glass-edge: rgb(255 255 255 / 0.06);
+  --amb-glass-sheen: linear-gradient(
+    155deg,
+    rgb(255 255 255 / 0.07) 0%,
+    rgb(255 255 255 / 0.02) 36%,
+    rgb(255 255 255 / 0) 64%
+  );
+
+  // -- Borders -------------------------------------------------------------
+  //
+  // Light on dark, and inverted in strength: ink hairlines simply disappear.
+
+  --amb-border: rgb(255 255 255 / 0.09);
+  --amb-border-strong: rgb(255 255 255 / 0.16);
+  --amb-border-subtle: rgb(255 255 255 / 0.055);
+  --amb-border-accent: rgb(var(--amb-accent-rgb) / 0.42);
+  --amb-border-dashed: rgb(255 255 255 / 0.18);
+
+  // -- Text ----------------------------------------------------------------
+  //
+  // Not pure white: #ffffff on a dark surface haloes and is tiring to read.
+  // Measured against `--amb-surface-2` over `--amb-canvas`:
+  //   text  14.2:1     muted  7.1:1     subtle  4.9:1
+
+  --amb-text: #e9ecf5;
+  --amb-text-muted: #a9b0c6;
+  --amb-text-subtle: #8a92ab;
+  --amb-text-on-accent: #0a0d17;
+
+  // -- Feedback ------------------------------------------------------------
+  //
+  // Lifted two or three steps up each ramp. The light-mode hues are chosen for
+  // contrast against white and are far too dark to read on this canvas.
+
+  --amb-danger: #f87171;
+  --amb-danger-strong: #fca5a5;
+  --amb-danger-soft: rgb(248 113 113 / 0.14);
+  --amb-danger-border: rgb(248 113 113 / 0.3);
+
+  --amb-warn: #fbbf24;
+  --amb-warn-soft: rgb(251 191 36 / 0.14);
+  --amb-warn-border: rgb(251 191 36 / 0.3);
+
+  --amb-success: #34d399;
+  --amb-success-soft: rgb(52 211 153 / 0.14);
+  --amb-success-border: rgb(52 211 153 / 0.28);
+
+  --amb-info: #60a5fa;
+  --amb-info-soft: rgb(96 165 250 / 0.14);
+  --amb-info-border: rgb(96 165 250 / 0.28);
+
+  // -- Data visualisation --------------------------------------------------
+
+  --amb-viz-1: #6aa9ff;
+  --amb-viz-2: #ff9057;
+  --amb-viz-track: rgb(106 169 255 / 0.18);
+  --amb-viz-track-soft: rgb(106 169 255 / 0.26);
+  --amb-viz-grid: rgb(255 255 255 / 0.09);
+
+  --amb-skeleton-base: rgb(255 255 255 / 0.07);
+  --amb-skeleton-sheen: rgb(255 255 255 / 0.08);
+
+  --amb-scrollbar: rgb(255 255 255 / 0.16);
+  --amb-scrollbar-hover: rgb(255 255 255 / 0.28);
+  --amb-swatch-ring: rgb(255 255 255 / 0.2);
+
+  // -- Shadow --------------------------------------------------------------
+  //
+  // Blacker and much deeper. A shadow tinted with ink is invisible against a
+  // near-black canvas; depth on dark comes from real darkness plus the lit rim
+  // above, not from a soft grey halo.
+
+  --amb-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --amb-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px -6px rgb(0 0 0 / 0.5);
+  --amb-shadow-md: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 30px -12px rgb(0 0 0 / 0.6);
+  --amb-shadow-lg: 0 2px 4px rgb(0 0 0 / 0.45), 0 22px 48px -16px rgb(0 0 0 / 0.65);
+  --amb-shadow-xl: 0 2px 6px rgb(0 0 0 / 0.5), 0 40px 80px -24px rgb(0 0 0 / 0.75);
+
+  --amb-glow-soft: 0 0 0 4px rgb(var(--amb-accent-rgb) / 0.16);
+  --amb-glow-focus: 0 0 0 3px rgb(var(--amb-accent-rgb) / 0.36);
+
+  // The tooltip inverts the other way: light surface, dark text.
+  --amb-inverse-surface: rgb(232 236 246 / 0.95);
+  --amb-inverse-text: #10131f;
+
+  --amb-mask: rgb(2 4 10 / 0.62);
+}
+
+// -- 5. Capability and preference fallbacks ---------------------------------
+//
+// Two escape hatches from glass, because glass is a preference and a capability,
+// never a requirement. Both are written as token overrides rather than as rules,
+// so every surface in the product follows without being touched.
+
+// A browser without `backdrop-filter` would otherwise show the canvas gradient
+// straight through unblurred text, so the surfaces go nearly opaque instead.
+
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  :root {
+    --amb-glass-opacity-sunken: 0.86;
+    --amb-glass-opacity-1: 0.95;
+    --amb-glass-opacity-2: 0.97;
+    --amb-glass-opacity-3: 1;
+  }
+
+  :root.amb-dark {
+    --amb-glass-opacity-sunken: 0.88;
+    --amb-glass-opacity-1: 0.96;
+    --amb-glass-opacity-2: 0.98;
+    --amb-glass-opacity-3: 1;
+  }
+}
+
+// And a reader who has asked the OS for less transparency gets solid surfaces
+// and no ambient glows, without losing the layout, the depth cues or the
+// hierarchy — the shadows and borders still carry all of it.
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --amb-glass-opacity-sunken: 1;
+    --amb-glass-opacity-1: 1;
+    --amb-glass-opacity-2: 1;
+    --amb-glass-opacity-3: 1;
+    --amb-glass-sheen: none;
+    --amb-surface-sunken: #f4f6fb;
+    --amb-glow-1: transparent;
+    --amb-glow-2: transparent;
+    --amb-glow-3: transparent;
+    --amb-mask: rgb(16 20 38 / 0.55);
+    --amb-inverse-surface: #151a2e;
+  }
+
+  :root.amb-dark {
+    --amb-surface-sunken: #10141f;
+    --amb-mask: rgb(2 4 10 / 0.8);
+    --amb-inverse-surface: #e8ecf6;
+  }
+}

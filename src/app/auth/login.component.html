@@ -1,160 +1,125 @@
 <p-toast position="top-right"></p-toast>
 
-<main class="tp-auth">
-  <section class="tp-auth__card">
-    <header class="tp-auth__head">
-      <span class="tp-auth__badge" aria-hidden="true">
-        <i class="pi pi-check-circle"></i>
-      </span>
-      <h1 class="tp-auth__title">TaskPulse</h1>
-      <p class="tp-auth__subtitle">
-        {{ mode() === 'login' ? 'Sign in to pick up where you left off.' : 'Create an account to start tracking work.' }}
-      </p>
-    </header>
+<section class="auth-card amb-surface-3">
+  <header class="auth-card__head">
+    <span class="auth-card__mark" aria-hidden="true">
+      <i class="pi pi-check-circle"></i>
+    </span>
+    <h1 class="amb-page-title">TaskPulse</h1>
+    <p class="amb-page-subtitle">
+      {{
+        mode() === 'login'
+          ? 'Sign in to pick up where you left off.'
+          : 'Create an account to start tracking work.'
+      }}
+    </p>
+  </header>
 
-    @if (sessionExpired()) {
-      <p-message severity="warn" styleClass="tp-auth__notice">
-        Your session expired. Please sign in again.
-      </p-message>
-    }
+  @if (sessionExpired()) {
+    <p-message severity="warn" styleClass="auth-card__notice">
+      Your session expired. Please sign in again.
+    </p-message>
+  }
 
-    <p-selectbutton
-      [options]="modeOptions"
-      [ngModel]="mode()"
-      (ngModelChange)="setMode($event)"
-      [ngModelOptions]="{ standalone: true }"
-      optionLabel="label"
-      optionValue="value"
-      [allowEmpty]="false"
-      styleClass="tp-auth__modes"
-      aria-label="Choose whether to sign in or create an account"
-    ></p-selectbutton>
+  <p-selectbutton
+    [options]="modeOptions"
+    [ngModel]="mode()"
+    (ngModelChange)="setMode($event)"
+    [ngModelOptions]="{ standalone: true }"
+    optionLabel="label"
+    optionValue="value"
+    [allowEmpty]="false"
+    styleClass="auth-card__modes"
+    aria-label="Choose whether to sign in or create an account"
+  ></p-selectbutton>
 
-    @if (mode() === 'login') {
-      <form class="tp-auth__form" [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()">
-        <div class="tp-field">
-          <label class="tp-field__label" for="login-email">Email</label>
-          <input
-            id="login-email"
-            type="email"
-            pInputText
-            formControlName="email"
-            class="w-full"
-            autocomplete="email"
-            placeholder="you@example.com"
-          />
-          @if (showError(loginForm.controls.email)) {
-            <small class="tp-field__error">Email is required.</small>
-          }
-        </div>
+  @if (mode() === 'login') {
+    <form class="auth-card__form" [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()">
+      <amb-form-field label="Email" for="login-email" [error]="loginEmailError()">
+        <input
+          id="login-email"
+          type="email"
+          pInputText
+          ambInput
+          formControlName="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+        />
+      </amb-form-field>
 
-        <div class="tp-field">
-          <label class="tp-field__label" for="login-password">Password</label>
-          <p-password
-            inputId="login-password"
-            formControlName="password"
-            [feedback]="false"
-            [toggleMask]="true"
-            [fluid]="true"
-            autocomplete="current-password"
-            placeholder="Your password"
-          ></p-password>
-          @if (showError(loginForm.controls.password)) {
-            <small class="tp-field__error">Password is required.</small>
-          }
-        </div>
-
-        <p-button
-          type="submit"
-          label="Sign in"
-          icon="pi pi-sign-in"
+      <amb-form-field label="Password" for="login-password" [error]="loginPasswordError()">
+        <p-password
+          inputId="login-password"
+          formControlName="password"
+          [feedback]="false"
+          [toggleMask]="true"
           [fluid]="true"
-          [loading]="submitting()"
-          [disabled]="submitting()"
-        ></p-button>
-      </form>
-    } @else {
-      <form class="tp-auth__form" [formGroup]="registerForm" (ngSubmit)="onSubmitRegister()">
-        <div class="tp-field">
-          <label class="tp-field__label" for="register-name">Your name</label>
-          <input
-            id="register-name"
-            type="text"
-            pInputText
-            formControlName="displayName"
-            class="w-full"
-            autocomplete="name"
-            placeholder="Sam Rivera"
-          />
-          @if (showError(registerForm.controls.displayName)) {
-            <small class="tp-field__error">
-              @if (registerForm.controls.displayName.hasError('required')) {
-                Your name is required.
-              } @else {
-                Name cannot be longer than 100 characters.
-              }
-            </small>
-          }
-        </div>
+          autocomplete="current-password"
+          placeholder="Your password"
+        ></p-password>
+      </amb-form-field>
 
-        <div class="tp-field">
-          <label class="tp-field__label" for="register-email">Email</label>
-          <input
-            id="register-email"
-            type="email"
-            pInputText
-            formControlName="email"
-            class="w-full"
-            autocomplete="email"
-            placeholder="you@example.com"
-          />
-          @if (showError(registerForm.controls.email)) {
-            <small class="tp-field__error">
-              @if (registerForm.controls.email.hasError('required')) {
-                Email is required.
-              } @else {
-                Enter a valid email address.
-              }
-            </small>
-          }
-        </div>
+      <p-button
+        type="submit"
+        label="Sign in"
+        icon="pi pi-sign-in"
+        [fluid]="true"
+        [loading]="submitting()"
+        [disabled]="submitting()"
+        styleClass="auth-card__submit"
+      ></p-button>
+    </form>
+  } @else {
+    <form class="auth-card__form" [formGroup]="registerForm" (ngSubmit)="onSubmitRegister()">
+      <amb-form-field label="Your name" for="register-name" [error]="registerNameError()">
+        <input
+          id="register-name"
+          type="text"
+          pInputText
+          ambInput
+          formControlName="displayName"
+          autocomplete="name"
+          placeholder="Sam Rivera"
+        />
+      </amb-form-field>
 
-        <div class="tp-field">
-          <label class="tp-field__label" for="register-password">Password</label>
-          <p-password
-            inputId="register-password"
-            formControlName="password"
-            [toggleMask]="true"
-            [fluid]="true"
-            autocomplete="new-password"
-            placeholder="At least {{ minPasswordLength }} characters"
-          ></p-password>
-          @if (showError(registerForm.controls.password)) {
-            <small class="tp-field__error">
-              @if (registerForm.controls.password.hasError('required')) {
-                Password is required.
-              } @else if (registerForm.controls.password.hasError('minlength')) {
-                Password must be at least {{ minPasswordLength }} characters.
-              } @else {
-                Password cannot be longer than {{ maxPasswordLength }} characters.
-              }
-            </small>
-          } @else {
-            <small class="tp-field__hint">
-              {{ minPasswordLength }}&ndash;{{ maxPasswordLength }} characters.
-            </small>
-          }
-        </div>
+      <amb-form-field label="Email" for="register-email" [error]="registerEmailError()">
+        <input
+          id="register-email"
+          type="email"
+          pInputText
+          ambInput
+          formControlName="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+        />
+      </amb-form-field>
 
-        <p-button
-          type="submit"
-          label="Create account"
-          icon="pi pi-user-plus"
+      <amb-form-field
+        label="Password"
+        for="register-password"
+        [error]="registerPasswordError()"
+        [hint]="passwordHint"
+      >
+        <p-password
+          inputId="register-password"
+          formControlName="password"
+          [toggleMask]="true"
           [fluid]="true"
-          [loading]="submitting()"
-          [disabled]="submitting()"
-        ></p-button>
-      </form>
-    }
-  </section>
-</main>
+          autocomplete="new-password"
+          [placeholder]="'At least ' + minPasswordLength + ' characters'"
+        ></p-password>
+      </amb-form-field>
+
+      <p-button
+        type="submit"
+        label="Create account"
+        icon="pi pi-user-plus"
+        [fluid]="true"
+        [loading]="submitting()"
+        [disabled]="submitting()"
+        styleClass="auth-card__submit"
+      ></p-button>
+    </form>
+  }
+</section>

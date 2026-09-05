@@ -1,39 +1,66 @@
-import { Component, ElementRef, computed, inject, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { MenuModule } from 'primeng/menu';
 import { TooltipModule } from 'primeng/tooltip';
 
+import {
+  AmbientAvatarComponent,
+  AmbientBackgroundComponent,
+  AmbientBrand,
+  AmbientButtonDirective,
+  AmbientMenuComponent,
+  AmbientNavLink,
+  AmbientSidebarComponent,
+  AmbientThemeSwitcherComponent,
+  AMBIENT_PREFERENCE_KEYS,
+  readPreference,
+  writePreference
+} from './ambient/ambient';
 import { initialsOf } from './core/auth/auth.model';
 import { AuthService } from './core/auth/auth.service';
 import { TagService } from './core/tag.service';
 
-/** One entry in the main navigation. */
-interface NavLink {
-  label: string;
-  icon: string;
-  path: string;
-}
-
 /**
- * Application shell: a top bar with the wordmark, the main navigation and the account
- * menu, above whichever screen the router has matched.
+ * Application shell.
  *
- * <p>The bar hides itself while signed out. The login screen is the only route reachable
- * then, and showing navigation to places that would immediately bounce back would be
- * worse than showing none.</p>
+ * <h2>Layout</h2>
  *
- * <p>The shell is a viewport-height flex column and the content area is the application's
- * only scroll container, so the scrollbar belongs to the content rather than to the
- * window. Resetting that container between screens is this component's job — see
- * {@link resetScrollOnNavigation}.</p>
+ * <p>Above 900px: a docked navigation rail beside one scrolling content column,
+ * with the account block at the foot of the rail. Below it: the rail becomes a
+ * drawer and a topbar appears carrying the menu button, the wordmark and the
+ * account. The two sets of chrome never coexist — the topbar is
+ * {@code display: none} above the breakpoint and the rail is hidden below it —
+ * so the account control appearing in both is not a duplicate in the
+ * accessibility tree.</p>
+ *
+ * <p>All of that lives in {@code _ambient-layout.scss} and
+ * {@code <amb-sidebar>}. What is left in this component is the shell's
+ * behaviour: who is signed in, what the navigation points at, and resetting the
+ * scroll position between screens.</p>
+ *
+ * <p>The chrome hides itself while signed out. The login screen is the only
+ * route reachable then, and showing navigation to places that would immediately
+ * bounce back would be worse than showing none. The router outlet stays mounted
+ * across that change rather than living inside the {@code @if}, so signing in
+ * does not tear down and rebuild the scroll container.</p>
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonModule, MenuModule, TooltipModule],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    ButtonModule,
+    TooltipModule,
+    AmbientAvatarComponent,
+    AmbientBackgroundComponent,
+    AmbientButtonDirective,
+    AmbientMenuComponent,
+    AmbientSidebarComponent,
+    AmbientThemeSwitcherComponent
+  ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -46,19 +73,46 @@ export class AppComponent {
       before the view has been created. */
   private readonly scrollArea = viewChild<ElementRef<HTMLElement>>('scrollArea');
 
-  readonly appName = 'TaskPulse';
+  readonly brand: AmbientBrand = {
+    name: 'TaskPulse',
+    icon: 'pi pi-check-circle',
+    link: '/dashboard'
+  };
 
   readonly user = this.auth.user;
   readonly isAuthenticated = this.auth.isAuthenticated;
 
   readonly initials = computed(() => initialsOf(this.user()));
 
-  readonly navLinks: NavLink[] = [
+  readonly navLinks: AmbientNavLink[] = [
     { label: 'Dashboard', icon: 'pi pi-chart-bar', path: '/dashboard' },
     { label: 'Tasks', icon: 'pi pi-list', path: '/tasks' },
     { label: 'Board', icon: 'pi pi-th-large', path: '/board' },
     { label: 'Tags', icon: 'pi pi-tags', path: '/tags' }
   ];
+
+  /** Whether the mobile navigation drawer is open. Closed on every navigation. */
+  readonly navOpen = signal(false);
+
+  /**
+   * Whether the docked rail is collapsed to icons.
+   *
+   * <p>It lives here rather than inside {@code <amb-sidebar>} because the shell
+   * owns the grid the rail is a column of: {@code .amb-shell--rail} on that grid
+   * is what actually animates the width, and the sidebar only restyles its own
+   * contents to match.</p>
+   *
+   * <p>Restored synchronously so the first paint is already the right width — a
+   * rail that expands a beat after load looks like a bug, not an animation.</p>
+   */
+  readonly navCollapsed = signal(
+    readPreference(AMBIENT_PREFERENCE_KEYS.navCollapsed) === 'true'
+  );
+
+  /** Names both account triggers, neither of which has a visible label. */
+  readonly accountMenuLabel = computed(
+    () => `Account menu for ${this.user()?.displayName ?? 'your account'}`
+  );
 
   /** Account menu. Recomputed so the header always shows the current account. */
   readonly accountMenu = computed<MenuItem[]>(() => {
@@ -70,7 +124,7 @@ export class AppComponent {
           {
             label: current ? current.email : '',
             disabled: true,
-            styleClass: 'tp-account__email'
+            styleClass: 'app-account__email-item'
           },
           { separator: true },
           {
@@ -87,13 +141,21 @@ export class AppComponent {
     this.resetScrollOnNavigation();
   }
 
+  /** Collapses or expands the rail, and remembers which. */
+  setNavCollapsed(collapsed: boolean): void {
+    this.navCollapsed.set(collapsed);
+    writePreference(AMBIENT_PREFERENCE_KEYS.navCollapsed, String(collapsed));
+  }
+
   /**
-   * Sends the content area back to the top when the route changes.
+   * Sends the content area back to the top when the route changes, and closes
+   * the mobile drawer.
    *
-   * <p>Angular's own {@code withInMemoryScrolling} cannot do this here. It drives
-   * {@code ViewportScroller}, which scrolls the window — and the window no longer
-   * scrolls, so it silently does nothing and each screen opens at the scroll offset the
-   * last one was left at. Scrolling the container directly is the equivalent.</p>
+   * <p>Angular's own {@code withInMemoryScrolling} cannot do the first part. It
+   * drives {@code ViewportScroller}, which scrolls the window — and the window
+   * no longer scrolls, so it silently does nothing and each screen opens at the
+   * offset the last one was left at. Scrolling the container directly is the
+   * equivalent.</p>
    */
   private resetScrollOnNavigation(): void {
     this.router.events
@@ -101,7 +163,10 @@ export class AppComponent {
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed()
       )
-      .subscribe(() => this.scrollArea()?.nativeElement.scrollTo({ top: 0 }));
+      .subscribe(() => {
+        this.scrollArea()?.nativeElement.scrollTo({ top: 0 });
+        this.navOpen.set(false);
+      });
   }
 
   private signOut(): void {

@@ -1,0 +1,295 @@
+// =========================================================================
+// Ambient UI — mixins
+//
+// The behaviour behind the tokens. Every glass surface, focus ring, hover
+// state and responsive rule in the system comes from a mixin here, which is
+// what makes "all cards feel like they belong to the same family" a property
+// of the code rather than a thing to remember.
+//
+// The single most important rule in this file is in `glass()`: **blur is only
+// applied to a surface that sits directly on the ambient canvas or on a modal
+// mask.** A blurred surface samples whatever is immediately behind it, so a
+// glass card nested inside a glass panel blurs the panel — not the canvas —
+// and the result is the flat grey mush that makes glassmorphism look cheap.
+// Nested surfaces use `glass-nested()`, which is tint and border only.
+//
+// Sections
+//   1. Responsive
+//   2. Glass surfaces
+//   3. Interaction states
+//   4. Motion
+//   5. Typography
+//   6. Composites
+// =========================================================================
+
+// -- 1. Responsive ---------------------------------------------------------
+
+/// Styles that apply at or below a breakpoint. Mobile fixes are written as
+/// overrides of the desktop rule, matching how the layout is authored.
+@mixin respond-below($width) {
+  @media (max-width: $width) {
+    @content;
+  }
+}
+
+/// Styles that apply above a breakpoint. Used sparingly — only where a
+/// desktop-only affordance (the docked sidebar) has no mobile equivalent.
+@mixin respond-above($width) {
+  @media (min-width: $width + 1px) {
+    @content;
+  }
+}
+
+// -- 2. Glass surfaces -----------------------------------------------------
+
+/// A glass surface sitting directly on the ambient canvas.
+///
+/// @param {String} $level - `1` panel, `2` card, `3` overlay, `sunken` well.
+/// @param {String} $radius - a `--amb-radius-*` role token.
+/// @param {String} $shadow - a `--amb-shadow-*` step.
+/// @param {Boolean} $blur - set false for a surface nested inside another
+///   glass surface, where blurring would sample the parent rather than the
+///   canvas. Prefer `glass-nested()`, which reads as what it means.
+@mixin glass($level: 2, $radius: var(--amb-radius-card), $shadow: var(--amb-shadow-md), $blur: true) {
+  position: relative;
+  border: 1px solid var(--amb-border);
+  border-radius: $radius;
+
+  // Two layers: the sheen falling across the face, over the surface tint. The
+  // sheen is what stops a translucent rectangle reading as a sheet of plastic —
+  // real glass catches the light unevenly.
+  background-color: var(--amb-surface-#{$level});
+  background-image: var(--amb-glass-sheen);
+
+  // The drop shadow plus the lit rim. `--amb-glass-inset` is the specular line
+  // along the top edge and the hairline of light around the whole surface;
+  // composing both from one token is what guarantees a card, a dialog and a
+  // PrimeNG panel catch the light identically.
+  box-shadow: $shadow, var(--amb-glass-inset);
+
+  @if $blur {
+    // -webkit- first: Safari still needs the prefix, and the unprefixed
+    // property is the one that should win where both are understood.
+    -webkit-backdrop-filter: var(--amb-glass-filter);
+    backdrop-filter: var(--amb-glass-filter);
+  }
+}
+
+/// A surface inside another glass surface: same family, no second blur.
+@mixin glass-nested($level: 2, $radius: var(--amb-radius-md), $shadow: none) {
+  @include glass($level, $radius, $shadow, $blur: false);
+}
+
+/// The overlay family: dialogs, menus, select panels, tooltips. One mixin so
+/// every floating thing in the product has the same weight and the same
+/// corner, whether PrimeNG drew it or we did.
+@mixin glass-overlay($radius: var(--amb-radius-overlay)) {
+  border: 1px solid var(--amb-border);
+  border-radius: $radius;
+  background-color: var(--amb-surface-3);
+  background-image: var(--amb-glass-sheen);
+  box-shadow: var(--amb-shadow-xl), var(--amb-glass-inset);
+  -webkit-backdrop-filter: var(--amb-glass-filter-overlay);
+  backdrop-filter: var(--amb-glass-filter-overlay);
+}
+
+/// A well: an input, a meter track, a count badge. Reads as cut into the
+/// surface above it, which is the inset shadow's whole job.
+@mixin glass-sunken($radius: var(--amb-radius-field)) {
+  border: 1px solid var(--amb-border);
+  border-radius: $radius;
+  background: var(--amb-surface-sunken);
+  // Shadow at the top, highlight at the bottom: the exact inverse of a raised
+  // surface, which is what makes the eye read it as cut in rather than sitting
+  // on top.
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.07), inset 0 -1px 0 0 var(--amb-highlight);
+}
+
+// -- 3. Interaction states -------------------------------------------------
+
+/// The one focus indicator in the product.
+///
+/// `outline` rather than `box-shadow` on purpose: an outline follows
+/// `border-radius`, is never clipped by an ancestor's `overflow: hidden`, and
+/// survives forced-colors mode, where a box-shadow is simply dropped and the
+/// user is left with no visible focus at all.
+@mixin focus-ring($offset: 2px) {
+  outline: 2px solid var(--amb-accent);
+  outline-offset: $offset;
+}
+
+/// Focus that is only shown to keyboard users, on the element itself.
+@mixin focusable($offset: 2px) {
+  &:focus-visible {
+    @include focus-ring($offset);
+  }
+}
+
+/// Hover for a surface that can be clicked: it rises, its edge picks up the
+/// accent, and it gains a soft halo. All three together, so the affordance
+/// does not rest on colour alone.
+@mixin hover-lift($shadow: var(--amb-shadow-lg)) {
+  &:hover {
+    border-color: var(--amb-border-accent);
+    box-shadow: $shadow, var(--amb-glow-soft), var(--amb-glass-inset);
+    transform: translateY(var(--amb-lift));
+  }
+
+  // Returning to rest on press, rather than sinking below it: a surface that
+  // drops under the cursor feels like it broke.
+  &:active {
+    transform: translateY(0);
+    box-shadow: var(--amb-shadow-sm), var(--amb-glass-inset);
+  }
+}
+
+/// The shared disabled treatment. `pointer-events: none` is intentionally
+/// absent — a disabled control still needs to accept a hover so its tooltip
+/// can explain why it is disabled.
+@mixin disabled-state {
+  &:disabled,
+  &[aria-disabled='true'],
+  &.amb-is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+// -- 4. Motion -------------------------------------------------------------
+
+/// The standard composite transition, with the reduced-motion opt-out built
+/// in. Using this instead of writing `transition:` by hand is what guarantees
+/// every animation in the product honours the preference.
+@mixin transition($props: var(--amb-transition)) {
+  transition: $props;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/// A single property, same guarantee.
+@mixin transition-prop($property, $duration: var(--amb-duration-base), $ease: var(--amb-ease)) {
+  transition: #{$property} $duration $ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/// Content arriving on screen: a short fade with a few pixels of travel.
+/// Suppressed entirely under reduced motion rather than merely shortened.
+///
+/// The `amb-enter` keyframes themselves are declared once in
+/// `_ambient-base.scss`. Keyframes are global no matter which component
+/// declared them, so emitting a copy per call site only bloats the bundle.
+/// `$distance` is applied as a custom property the keyframes read, which is
+/// what lets one global animation serve every travel distance.
+@mixin enter($distance: 6px, $duration: var(--amb-duration-slow)) {
+  --amb-enter-distance: #{$distance};
+  animation: amb-enter $duration var(--amb-ease-soft) both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/// Staggered entry for a list of siblings. Capped at `$max` children: past
+/// roughly eight the last item waits long enough that the page feels slow.
+@mixin enter-stagger($children: 8, $step: 40ms) {
+  @for $i from 1 through $children {
+    > :nth-child(#{$i}) {
+      animation-delay: $step * ($i - 1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    > * {
+      animation-delay: 0s;
+    }
+  }
+}
+
+// -- 5. Typography ---------------------------------------------------------
+
+/// The small uppercase label above a figure or a column of cards.
+@mixin eyebrow {
+  font-size: var(--amb-text-xs);
+  font-weight: var(--amb-weight-semibold);
+  line-height: var(--amb-leading-snug);
+  letter-spacing: var(--amb-tracking-wide);
+  text-transform: uppercase;
+  color: var(--amb-text-subtle);
+}
+
+/// Figures: tabular so a changing number cannot shift the layout under it,
+/// and tight tracking because large numerals are loose by default.
+@mixin figure($size: var(--amb-text-3xl)) {
+  font-size: $size;
+  font-weight: var(--amb-weight-semibold);
+  line-height: var(--amb-leading-tight);
+  letter-spacing: var(--amb-tracking-tight);
+  font-variant-numeric: tabular-nums;
+  color: var(--amb-text);
+}
+
+/// One line, clipped with an ellipsis.
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/// N lines, then clipped. `-webkit-` prefixed properties are still the only
+/// interoperable way to do this; `line-clamp` is included for the browsers
+/// that have shipped the standard property.
+@mixin clamp-lines($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// -- 6. Composites ---------------------------------------------------------
+
+/// Everything an interactive glass surface needs: the surface, its highlight,
+/// its transition, its hover, its focus and its disabled state. A card that
+/// links somewhere is one line.
+@mixin interactive-surface($level: 2, $radius: var(--amb-radius-card)) {
+  // Plain declarations first. Sass is changing how a declaration that follows a
+  // nested rule is ordered, and mixing the two here raises a deprecation on
+  // every call site; keeping the flat properties above the `@include`s that
+  // emit nested rules sidesteps it and matches the final CSS either way.
+  cursor: pointer;
+  // Inherit, not a colour: this is used on `<a>`, which would otherwise take
+  // the link colour and turn a whole tile blue.
+  color: inherit;
+  text-decoration: none;
+
+  @include glass($level, $radius);
+  @include transition;
+  @include hover-lift;
+  @include focusable;
+  @include disabled-state;
+
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+/// Visually hidden, still announced. Used for the labels on icon-only columns
+/// and for chart captions.
+@mixin sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

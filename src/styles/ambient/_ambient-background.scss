@@ -1,0 +1,170 @@
+// =========================================================================
+// Ambient UI — the ambient background
+//
+// The environment the whole product sits inside. One fixed layer behind
+// everything, rendered once by `<amb-background>` at the top of the shell and
+// never repeated per page — which is what stops "ambient" from turning into
+// each screen inventing its own gradient.
+//
+// Three rules keep it from competing with content:
+//
+//   1. Every glow is a radial gradient that fades to fully transparent, not a
+//      blurred solid. A gradient costs nothing to composite; `filter: blur()`
+//      on a large element repaints on every scroll.
+//   2. Alpha stays in the 9-13% band (see `--amb-glow-*` in the tokens). Enough
+//      to read as a lit room, not enough to tint a paragraph.
+//   3. The layer is `pointer-events: none` and sits at `--amb-z-canvas`, below
+//      every application surface, so it can never intercept a click.
+//
+// Sections
+//   1. The layer
+//   2. Glows
+//   3. Mesh
+//   4. Motion
+//   5. Reduced transparency
+// =========================================================================
+
+// -- 1. The layer ----------------------------------------------------------
+
+.amb-bg {
+  position: fixed;
+  inset: 0;
+  z-index: var(--amb-z-canvas);
+  overflow: hidden;
+  pointer-events: none;
+
+  // The ground: a barely-there vertical fall from the canvas to its deeper
+  // step, so the top of the viewport reads as lit and the bottom as settled.
+  background:
+    linear-gradient(180deg, var(--amb-canvas) 0%, var(--amb-canvas-deep) 100%);
+}
+
+// A vignette over everything else: the corners fall away, which is what stops a
+// large screen reading as a flat sheet and quietly steers the eye to the middle
+// where the content is. Ink in light mode, black in dark — the token flips.
+.amb-bg__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 90% at 50% 40%,
+    transparent 42%,
+    var(--amb-bg-vignette) 100%
+  );
+}
+
+// -- 2. Glows --------------------------------------------------------------
+//
+// Three, at different sizes and in different corners. Two would read as a
+// symmetrical gradient; four starts to look like a screensaver.
+//
+// Each is sized in `vmax` so the composition holds its proportions from a phone
+// to an ultrawide instead of a blob collapsing into a corner.
+
+.amb-bg__glow {
+  position: absolute;
+  border-radius: 50%;
+  // A single stop at 70% rather than a hard edge: the gradient does the
+  // softening, so there is no `filter` in the paint path.
+  background: radial-gradient(closest-side, var(--amb-bg-glow-color) 0%, transparent 70%);
+  will-change: transform;
+}
+
+// Top-left, the largest and the most saturated: the primary light source.
+.amb-bg__glow--1 {
+  --amb-bg-glow-color: var(--amb-glow-1);
+
+  top: -22vmax;
+  left: -14vmax;
+  width: 68vmax;
+  height: 68vmax;
+}
+
+// Top-right, violet, smaller. Gives the top edge two temperatures rather than
+// one wash of the accent.
+.amb-bg__glow--2 {
+  --amb-bg-glow-color: var(--amb-glow-2);
+
+  top: -26vmax;
+  right: -18vmax;
+  width: 56vmax;
+  height: 56vmax;
+}
+
+// Bottom, cyan, widest and weakest — it lifts the foot of the page just enough
+// that a long screen does not end in flat grey.
+.amb-bg__glow--3 {
+  --amb-bg-glow-color: var(--amb-glow-3);
+
+  right: 8vmax;
+  bottom: -32vmax;
+  width: 74vmax;
+  height: 74vmax;
+}
+
+// -- 3. Mesh ---------------------------------------------------------------
+//
+// A 64px grid at ~2% alpha. This is the "slightly futuristic" note, and it is
+// deliberately at the threshold of visibility: legible as texture when you look
+// for it, invisible when you are reading. It also fades out towards the bottom,
+// so the grid never runs into the densest part of a page.
+
+.amb-bg__mesh {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--amb-bg-mesh) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--amb-bg-mesh) 1px, transparent 1px);
+  background-size: 64px 64px;
+  // Fade the grid out over the lower half. `mask` is safe to use unguarded
+  // here: where it is unsupported the grid simply covers the full height, which
+  // is a cosmetic difference, not a broken layout.
+  mask: linear-gradient(180deg, #000 0%, #000 35%, transparent 88%);
+  -webkit-mask: linear-gradient(180deg, #000 0%, #000 35%, transparent 88%);
+}
+
+// A single wide highlight raked across the top of the viewport, which is what
+// gives the canvas a direction of light rather than an even glow.
+.amb-bg__sheen {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 46vh;
+  background: linear-gradient(180deg, var(--amb-bg-sheen) 0%, transparent 100%);
+}
+
+// -- 4. Motion -------------------------------------------------------------
+//
+// The glows drift, very slowly and out of phase with each other. At 48-72s per
+// cycle and a few percent of travel this is below the threshold at which the
+// eye starts to track something, which is the line between "alive" and
+// "distracting". Suppressed entirely under reduced motion.
+
+@media (prefers-reduced-motion: no-preference) {
+  .amb-bg__glow--1 {
+    animation: amb-drift 54s var(--amb-ease) infinite;
+  }
+
+  .amb-bg__glow--2 {
+    animation: amb-drift 72s var(--amb-ease) infinite reverse;
+    animation-delay: -18s;
+  }
+
+  .amb-bg__glow--3 {
+    animation: amb-drift 64s var(--amb-ease) infinite;
+    animation-delay: -32s;
+  }
+}
+
+// -- 5. Reduced transparency -----------------------------------------------
+//
+// A reader who has asked the OS for less transparency gets a plain ground. The
+// tokens already blank `--amb-glow-*`, so the glows collapse on their own; the
+// mesh and the sheen are removed here because they are texture rather than
+// colour and no token covers them.
+
+@media (prefers-reduced-transparency: reduce) {
+  .amb-bg__mesh,
+  .amb-bg__sheen,
+  .amb-bg__vignette {
+    display: none;
+  }
+}

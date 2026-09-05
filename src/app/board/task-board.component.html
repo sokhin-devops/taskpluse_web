@@ -6,27 +6,23 @@
   rejectButtonStyleClass="p-button-text p-button-secondary"
 ></p-confirmdialog>
 
-<main class="tp-board">
-  <header class="tp-header">
-    <div class="tp-header__text">
-      <h1 class="tp-header__title">Board</h1>
-      <p class="tp-header__summary">{{ summary() }}</p>
-    </div>
-    <p-button label="New task" icon="pi pi-plus" (onClick)="openCreate('TODO')"></p-button>
-  </header>
+<amb-page width="wide">
+  <amb-page-header title="Board" [subtitle]="summary()">
+    <p-button label="New task" icon="pi pi-plus-circle" (onClick)="openCreate('TODO')"></p-button>
+  </amb-page-header>
 
   @if (loading()) {
-    <div class="tp-columns">
+    <div class="board-columns">
       @for (column of skeletonColumns; track column.status) {
-        <section class="tp-column">
-          <header class="tp-column__head">
-            <span class="tp-column__title">{{ column.label }}</span>
+        <section class="board-column amb-surface-1">
+          <header class="board-column__head">
+            <span class="board-column__title">{{ column.label }}</span>
           </header>
-          <div class="tp-column__body" aria-hidden="true">
+          <div class="board-column__body" aria-hidden="true">
             @for (card of skeletonCards; track card) {
-              <div class="tp-card tp-card--skeleton">
+              <div class="board-card board-card--skeleton">
                 <p-skeleton width="80%" height="1rem"></p-skeleton>
-                <p-skeleton width="45%" height="0.75rem" styleClass="tp-skeleton-sub"></p-skeleton>
+                <p-skeleton width="45%" height="0.75rem" styleClass="board-skeleton-sub"></p-skeleton>
               </div>
             }
           </div>
@@ -34,40 +30,42 @@
       }
     </div>
   } @else if (loadFailed()) {
-    <div class="tp-state">
-      <i class="pi pi-exclamation-triangle tp-state__icon tp-state__icon--error" aria-hidden="true"></i>
-      <h2 class="tp-state__title">We couldn't load your board</h2>
-      <p class="tp-state__text">
-        The TaskPulse API did not respond. Check that it is running, then try again.
-      </p>
-      <p-button label="Try again" icon="pi pi-refresh" [outlined]="true" (onClick)="reload()"></p-button>
-    </div>
+    <amb-card flush>
+      <amb-empty-state
+        tone="error"
+        icon="pi pi-exclamation-triangle"
+        title="We couldn't load your board"
+        text="The TaskPulse API did not respond. Check that it is running, then try again."
+      >
+        <p-button label="Try again" icon="pi pi-refresh" [outlined]="true" (onClick)="reload()"></p-button>
+      </amb-empty-state>
+    </amb-card>
   } @else {
     @if (isEmpty()) {
-      <div class="tp-state">
-        <i class="pi pi-th-large tp-state__icon" aria-hidden="true"></i>
-        <h2 class="tp-state__title">Your board is empty</h2>
-        <p class="tp-state__text">
-          Add a task and it will appear in <strong>To do</strong>, ready to drag across as
-          you work on it.
-        </p>
-        <p-button label="Add task" icon="pi pi-plus" (onClick)="openCreate('TODO')"></p-button>
-      </div>
+      <amb-card flush>
+        <amb-empty-state
+          icon="pi pi-th-large"
+          title="Your board is empty"
+          text="Add a task and it will appear in To do, ready to drag across as you work on it."
+        >
+          <p-button label="Add task" icon="pi pi-plus-circle" (onClick)="openCreate('TODO')"></p-button>
+        </amb-empty-state>
+      </amb-card>
     }
 
     <!-- The columns stay mounted even when empty, so there is somewhere to drop a card
          and so the workflow itself is visible before any task exists. -->
-    <div class="tp-columns" [class.tp-columns--muted]="isEmpty()">
+    <div class="board-columns" [class.board-columns--muted]="isEmpty()">
       @for (column of columns(); track column.status) {
-        <section class="tp-column" [attr.aria-label]="column.label + ' column'">
-          <header class="tp-column__head">
-            <span class="tp-column__title">
+        <section class="board-column amb-surface-1" [attr.aria-label]="column.label + ' column'">
+          <header class="board-column__head">
+            <span class="board-column__title">
               <i [class]="columnIcon(column.status)" aria-hidden="true"></i>
               {{ column.label }}
             </span>
-            <span class="tp-column__count">{{ column.total }}</span>
+            <span class="board-column__count amb-num">{{ column.total }}</span>
             <p-button
-              icon="pi pi-plus"
+              icon="pi pi-plus-circle"
               [rounded]="true"
               [text]="true"
               size="small"
@@ -80,7 +78,7 @@
           </header>
 
           <div
-            class="tp-column__body"
+            class="board-column__body"
             cdkDropList
             [id]="columnId(column.status)"
             [cdkDropListData]="column.tasks"
@@ -89,25 +87,25 @@
           >
             @for (task of column.tasks; track task.id) {
               <article
-                class="tp-card tp-transition"
-                [class.tp-card--done]="task.completed"
+                class="board-card"
+                [class.board-card--done]="task.completed"
                 cdkDrag
                 [cdkDragData]="task"
               >
                 <!-- Shown in place of the card while it is being dragged, so the column
                      does not collapse and reflow under the cursor. -->
-                <div class="tp-card__placeholder" *cdkDragPlaceholder></div>
+                <div class="board-card__placeholder" *cdkDragPlaceholder></div>
 
-                <div class="tp-card__top">
-                  <p-tag
+                <div class="board-card__top">
+                  <amb-badge
                     [severity]="prioritySeverityOf(task)"
-                    [value]="task.priorityLabel"
+                    [label]="task.priorityLabel"
                     [icon]="priorityIconOf(task)"
-                    [rounded]="true"
-                  ></p-tag>
-                  <div class="tp-card__actions">
+                    rounded
+                  />
+                  <div class="board-card__actions">
                     <p-button
-                      icon="pi pi-pencil"
+                      icon="pi pi-pen-to-square"
                       [rounded]="true"
                       [text]="true"
                       size="small"
@@ -131,45 +129,46 @@
                   </div>
                 </div>
 
-                <h3 class="tp-card__title">{{ task.title }}</h3>
+                <h3 class="board-card__title">{{ task.title }}</h3>
 
                 @if (task.description) {
-                  <p class="tp-card__description">{{ task.description }}</p>
+                  <p class="board-card__description">{{ task.description }}</p>
                 }
 
                 @if (task.tags.length > 0) {
-                  <div class="tp-card__tags">
+                  <div class="board-card__tags">
                     @for (tag of task.tags; track tag.id) {
-                      <span
-                        class="tp-chip"
-                        [style.background]="tag.color"
-                        [style.color]="tagTextColor(tag)"
-                      >{{ tag.name }}</span>
+                      <amb-badge
+                        [label]="tag.name"
+                        [color]="tag.color"
+                        [textColor]="tagTextColor(tag)"
+                        rounded
+                      />
                     }
                   </div>
                 }
 
                 @if (task.dueDate) {
                   <div
-                    class="tp-card__due"
+                    class="board-card__due"
                     [class]="dueClass(task)"
                     [pTooltip]="dueTooltip(task)"
                     tooltipPosition="top"
                   >
                     <i class="pi pi-calendar" aria-hidden="true"></i>
-                    <span>{{ asDate(task.dueDate) | date: 'MMM d' }}</span>
+                    <span class="amb-num">{{ asDate(task.dueDate) | date: 'MMM d' }}</span>
                   </div>
                 }
               </article>
             } @empty {
-              <p class="tp-column__empty">Drop a task here</p>
+              <p class="board-column__empty">Drop a task here</p>
             }
           </div>
         </section>
       }
     </div>
   }
-</main>
+</amb-page>
 
 <app-task-form
   [(visible)]="formVisible"

@@ -1,0 +1,31 @@
+// =========================================================================
+// Ambient UI — breakpoints
+//
+// The only part of the design system that cannot be a CSS custom property:
+// `@media` cannot read one, so these have to be literal Sass values.
+//
+// They live in their own module rather than alongside the tokens because a
+// component stylesheet needs them (through `respond-below()`) but must not pull
+// in the `:root` block. Angular compiles each component's SCSS separately, so
+// anything that emits CSS is emitted once per component — and a `:root` rule
+// inside a scoped stylesheet is rewritten to a selector that matches nothing.
+//
+// This file emits no CSS at all, which is what makes it safe to import
+// anywhere.
+// =========================================================================
+
+// -- 1. Breakpoints (Sass) -------------------------------------------------
+//
+// Literal because `@media` cannot read a custom property. Every responsive
+// rule in the system uses `respond-below()` from `_ambient-mixins.scss` rather
+// than repeating these numbers.
+
+$amb-bp-xs: 480px;
+$amb-bp-sm: 640px;
+$amb-bp-md: 768px;
+$amb-bp-lg: 900px;
+$amb-bp-xl: 1100px;
+$amb-bp-2xl: 1400px;
+
+// Where the shell swaps its docked sidebar for the mobile drawer.
+$amb-bp-nav: $amb-bp-lg;

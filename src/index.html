@@ -8,6 +8,49 @@
   <meta name="description" content="TaskPulse - a simple task manager for creating, tracking and completing your tasks with due dates.">
   <meta name="theme-color" content="#4f46e5">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+  <!--
+    Applies the stored theme before the first paint.
+
+    This has to be inline and synchronous. Angular boots after the browser has
+    already painted, so a service that applied dark mode on construction would
+    still show a white screen for a beat first — the single most noticeable flaw
+    a dark theme can have, and one that no amount of CSS can fix afterwards.
+
+    AmbientThemeService reads the same two keys and writes the same class and
+    attribute, so it agrees with whatever this decided and does not animate a
+    change it did not make. Keep the key names, the class and the attribute in
+    step with that service and with _ambient-tokens.scss.
+  -->
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var scheme = 'system';
+      var accent = 'indigo';
+
+      // Storage can throw, not merely return null: private mode and blocked
+      // site data both raise on access. A theme preference is never worth a
+      // blank page.
+      try {
+        scheme = localStorage.getItem('amb-theme') || scheme;
+        accent = localStorage.getItem('amb-accent') || accent;
+      } catch (e) {}
+
+      var dark =
+        scheme === 'dark' ||
+        (scheme !== 'light' &&
+          window.matchMedia &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+      if (dark) {
+        root.classList.add('amb-dark');
+      }
+      // Tells the browser which scheme is in play, so native controls, the
+      // scrollbar and the space around the page are drawn to match.
+      root.style.colorScheme = dark ? 'dark' : 'light';
+      root.setAttribute('data-amb-accent', accent);
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

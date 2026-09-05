@@ -1,0 +1,568 @@
+// =========================================================================
+// Ambient UI — PrimeNG component layer
+//
+// What the theme preset cannot express.
+//
+// Almost all of PrimeNG's appearance — colour, radius, spacing, shadow, type,
+// motion — is set in `src/app/ambient/ambient.preset.ts`, which points
+// PrimeNG's own design tokens at the `--amb-*` custom properties. That is the
+// right place for anything that is a value.
+//
+// This file is for the three kinds of thing a token cannot be:
+//
+//   1. `backdrop-filter`. There is no PrimeNG token for it, and it is the whole
+//      difference between a translucent panel and a glass one.
+//   2. The lit top edge, which is a pseudo-element.
+//   3. Structural fixes — a table that has to lose its outer border because it
+//      lives inside a card that already has one.
+//
+// It has to be global rather than component-scoped. PrimeNG renders every
+// overlay — dialogs, menus, select panels, tooltips, toasts — into `<body>`
+// through `appendTo`, where a component's scoped styles cannot reach them.
+//
+// The blur rule from `_ambient-mixins.scss` applies here too: blur only where
+// the surface sits on the canvas or on a mask. Nested surfaces are un-blurred
+// explicitly at the end of each section.
+//
+// Sections
+//   1. Buttons
+//   2. Form fields
+//   3. Surfaces: card, panel, toolbar
+//   4. Overlays: dialog, drawer, mask
+//   5. Floating panels: select, menu, datepicker, popover
+//   6. Table and paginator
+//   7. Tag, message, toast
+//   8. Skeleton
+//   9. Tooltip
+//  10. Segmented controls
+//  11. Nesting guards
+// =========================================================================
+
+@use 'ambient-breakpoints' as t;
+@use 'ambient-mixins' as m;
+
+// -- 1. Buttons ------------------------------------------------------------
+//
+// The preset already carries colour, radius and padding. What is left is the
+// motion: a filled button lifts a single pixel and picks up a soft halo, which
+// is the same affordance every other interactive surface in the system uses.
+
+.p-button {
+  letter-spacing: var(--amb-tracking-snug);
+
+  @include m.transition;
+
+  &:not(:disabled):hover {
+    transform: translateY(var(--amb-lift));
+  }
+
+  &:not(:disabled):active {
+    transform: translateY(0);
+  }
+
+  // Only the solid variants get a shadow. An outlined or text button that casts
+  // one reads as a filled button someone forgot to fill.
+  // The inset line is a specular highlight on the top edge — the same trick as
+  // the glass surfaces, at a lower alpha because it sits on a saturated fill
+  // rather than on a tint. White at 18% works on every accent in the palette,
+  // which a hand-picked lighter shade of one hue would not.
+  &:not(.p-button-text):not(.p-button-outlined):not(.p-button-link) {
+    box-shadow: var(--amb-shadow-sm), inset 0 1px 0 0 rgb(255 255 255 / 0.18);
+
+    &:not(:disabled):hover {
+      box-shadow: var(--amb-shadow-md), var(--amb-glow-soft),
+        inset 0 1px 0 0 rgb(255 255 255 / 0.22);
+    }
+
+    &:not(:disabled):active {
+      box-shadow: var(--amb-shadow-xs);
+    }
+  }
+
+  &:disabled {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+// An icon-only round button — the row actions in a table, the card actions on
+// the board — is a target, not a surface. No shadow, no lift, just the tint.
+.p-button.p-button-rounded.p-button-text {
+  box-shadow: none;
+
+  &:not(:disabled):hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+// The two Ambient-only button treatments, applied by the `ambButton` directive.
+//
+// `ghost` is glass: it belongs on chrome and over busy surfaces, where a filled
+// button is a slab and a text button vanishes.
+.p-button.amb-btn--ghost {
+  border: 1px solid var(--amb-border);
+  background-color: var(--amb-surface-2);
+  background-image: var(--amb-glass-sheen);
+  box-shadow: var(--amb-shadow-xs), var(--amb-glass-inset);
+  color: var(--amb-text-muted);
+  -webkit-backdrop-filter: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
+  backdrop-filter: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
+
+  &:not(:disabled):hover {
+    border-color: var(--amb-border-accent);
+    background-color: var(--amb-surface-3);
+    box-shadow: var(--amb-shadow-sm), var(--amb-glow-soft), var(--amb-glass-inset);
+    color: var(--amb-text);
+  }
+}
+
+// `soft` is the accent as a tint: a secondary action that is still the accent's,
+// without the visual weight of an outline competing with the primary beside it.
+.p-button.amb-btn--soft {
+  border-color: transparent;
+  background: var(--amb-accent-soft);
+  box-shadow: none;
+  color: var(--amb-accent-on-soft);
+
+  &:not(:disabled):hover {
+    border-color: transparent;
+    background: var(--amb-accent-soft-hover);
+    box-shadow: none;
+    color: var(--amb-accent-on-soft);
+  }
+}
+
+// -- 2. Form fields --------------------------------------------------------
+//
+// The preset gives every field the sunken background, the border and the inset
+// well shadow. The blur is what makes it read as a well cut into glass rather
+// than a paler rectangle painted on it.
+
+.p-inputtext,
+.p-textarea,
+.p-select,
+.p-multiselect,
+.p-datepicker-input,
+.p-password-input,
+.p-inputnumber-input {
+  -webkit-backdrop-filter: blur(var(--amb-blur-sm));
+  backdrop-filter: blur(var(--amb-blur-sm));
+
+  @include m.transition;
+}
+
+// Focus: the border takes the accent and a halo appears outside it. The halo is
+// a `box-shadow` rather than an `outline` because it is decorative — the actual
+// focus indicator for a keyboard user is the outline from `:focus-visible`,
+// which the preset sets and which sits outside this ring.
+.p-inputtext:enabled:focus,
+.p-textarea:enabled:focus,
+.p-password-input:enabled:focus,
+.p-select:not(.p-disabled).p-focus,
+.p-multiselect:not(.p-disabled).p-focus {
+  box-shadow: var(--amb-glow-soft), inset 0 1px 2px rgb(20 26 48 / 0.03);
+}
+
+// A search input reads better as a pill: it is a filter, not a field you fill in
+// and submit.
+.p-iconfield .p-inputtext[type='search'] {
+  border-radius: var(--amb-radius-pill);
+}
+
+// `ambInput` and `ambSelect`: fill the width you are given. PrimeNG's controls
+// size to their content otherwise, and the field that forgets `w-full` is the
+// one that looks broken.
+.amb-input,
+.amb-select {
+  width: 100%;
+}
+
+// A `p-select` renders a label span inside itself; without this the host is full
+// width but the label still collapses, which reads as a misaligned control.
+.amb-select .p-select-label,
+.amb-select .p-multiselect-label {
+  width: 100%;
+}
+
+// -- 3. Surfaces: card, panel, toolbar -------------------------------------
+//
+// These take `content.background` from the preset, which is the level-2 glass.
+// Here they gain the blur behind it and the lit top edge, which together are
+// what separate "translucent" from "glass".
+
+.p-card,
+.p-panel,
+.p-toolbar {
+  position: relative;
+  border: 1px solid var(--amb-border);
+  // The sheen falls over the tint that PrimeNG's own content.background token
+  // supplies, so the two layers compose instead of fighting.
+  background-image: var(--amb-glass-sheen);
+  -webkit-backdrop-filter: var(--amb-glass-filter);
+  backdrop-filter: var(--amb-glass-filter);
+}
+
+// --amb-glass-inset is the lit rim: a specular line along the top edge and a
+// hairline of light around the whole surface. Composing it from the same token
+// the glass() mixin uses is what makes a PrimeNG card and an ambient one catch
+// the light identically — and what lets dark mode soften both at once.
+.p-card {
+  box-shadow: var(--amb-shadow-md), var(--amb-glass-inset);
+}
+
+.p-panel,
+.p-toolbar {
+  box-shadow: var(--amb-shadow-sm), var(--amb-glass-inset);
+}
+
+// A card whose only child is a table should not add its own padding on top of
+// the table's cell padding — the result is a stripe of empty glass around the
+// data. The `amb-card--flush` modifier, which `<amb-card>` sets, removes it.
+.p-card.amb-card--flush > .p-card-body {
+  padding: 0;
+  gap: 0;
+}
+
+.p-card.amb-card--flush .p-card-content {
+  padding: 0;
+}
+
+// -- 4. Overlays: dialog, drawer, mask -------------------------------------
+
+.p-dialog-mask,
+.p-drawer-mask {
+  background: var(--amb-mask);
+  -webkit-backdrop-filter: blur(var(--amb-blur-sm)) saturate(120%);
+  backdrop-filter: blur(var(--amb-blur-sm)) saturate(120%);
+}
+
+.p-dialog,
+.p-drawer {
+  position: relative;
+  border: 1px solid var(--amb-border);
+  background-image: var(--amb-glass-sheen);
+  box-shadow: var(--amb-shadow-xl), var(--amb-glass-inset);
+  -webkit-backdrop-filter: var(--amb-glass-filter-overlay);
+  backdrop-filter: var(--amb-glass-filter-overlay);
+}
+
+// The dialog's own header and footer are separated by a hairline rather than by
+// a change of background: a filled bar inside a glass panel reads as a second
+// surface stacked on the first.
+.p-dialog-header {
+  border-bottom: 1px solid var(--amb-border-subtle);
+}
+
+.p-dialog-footer {
+  border-top: 1px solid var(--amb-border-subtle);
+}
+
+// Full-bleed on a phone. A dialog inset by a fixed margin on a 360px screen
+// leaves a form field about 250px wide.
+@include m.respond-below(t.$amb-bp-xs) {
+  .p-dialog {
+    width: calc(100vw - var(--amb-space-6)) !important;
+    max-width: calc(100vw - var(--amb-space-6));
+    margin: var(--amb-space-3);
+  }
+}
+
+// -- 5. Floating panels ----------------------------------------------------
+//
+// Select panels, menus, the datepicker and popovers. All four take the level-3
+// surface from the preset; the blur is added here so a menu opened over a busy
+// table stays readable.
+
+.p-select-overlay,
+.p-multiselect-overlay,
+.p-menu.p-menu-overlay,
+.p-tieredmenu-overlay,
+.p-datepicker-panel,
+.p-popover,
+.p-autocomplete-overlay,
+.p-treeselect-overlay,
+.p-cascadeselect-overlay {
+  background-image: var(--amb-glass-sheen);
+  box-shadow: var(--amb-shadow-xl), var(--amb-glass-inset);
+  -webkit-backdrop-filter: var(--amb-glass-filter-overlay);
+  backdrop-filter: var(--amb-glass-filter-overlay);
+}
+
+// Options carry the ambient transition so selection and hover fade rather than
+// snap. `list.option` in the preset sets everything else about them.
+.p-select-option,
+.p-multiselect-option,
+.p-menu-item-link,
+.p-autocomplete-option {
+  @include m.transition;
+}
+
+// -- 6. Table and paginator ------------------------------------------------
+//
+// The table always lives inside a card, so it draws no surface of its own —
+// every background is transparent in the preset. What is left here is the
+// structure: which edges keep a border, and how the header behaves.
+
+.p-datatable-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.p-datatable-thead > tr > th {
+  font-size: var(--amb-text-xs);
+  font-weight: var(--amb-weight-semibold);
+  letter-spacing: var(--amb-tracking-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+// The last row's bottom border is the card's own edge repeated a pixel inside
+// it. Dropping it is what stops a table looking boxed twice.
+.p-datatable-tbody > tr:last-child > td {
+  border-bottom: 0;
+}
+
+.p-datatable-tbody > tr {
+  @include m.transition;
+}
+
+// A sortable header is a button: it gets the hover tint and the focus ring, and
+// its sort icon strengthens once the column is actually sorted.
+.p-datatable-thead > tr > th.p-datatable-sortable-column {
+  @include m.transition;
+
+  &:focus-visible {
+    @include m.focus-ring(-2px);
+  }
+}
+
+.p-datatable-sort-icon {
+  font-size: var(--amb-text-2xs);
+}
+
+// The empty and loading states are rendered by the page, not by the table, so
+// the table's own empty message never appears; it is styled anyway for the case
+// where a screen relies on the built-in one.
+.p-datatable-empty-message > td {
+  padding: var(--amb-space-9) var(--amb-space-4);
+  text-align: center;
+  color: var(--amb-text-muted);
+}
+
+// A table inside a flush card runs to the card's own edge, so the outer cells
+// have to carry its corner themselves. Rounding them here rather than clipping
+// the frame is what keeps the paginator's inline dropdown from being cut off at
+// the foot of the card.
+.amb-card--flush .p-datatable-thead > tr > th:first-child {
+  border-start-start-radius: var(--amb-radius-card);
+}
+
+.amb-card--flush .p-datatable-thead > tr > th:last-child {
+  border-start-end-radius: var(--amb-radius-card);
+}
+
+.amb-card--flush .p-datatable-tbody > tr:last-child > td:first-child {
+  border-end-start-radius: var(--amb-radius-card);
+}
+
+.amb-card--flush .p-datatable-tbody > tr:last-child > td:last-child {
+  border-end-end-radius: var(--amb-radius-card);
+}
+
+.p-paginator {
+  border-top: 1px solid var(--amb-border-subtle);
+}
+
+.p-paginator .p-paginator-page,
+.p-paginator .p-paginator-first,
+.p-paginator .p-paginator-prev,
+.p-paginator .p-paginator-next,
+.p-paginator .p-paginator-last {
+  @include m.transition;
+}
+
+.p-paginator-current {
+  font-size: var(--amb-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+// -- 7. Tag, message, toast ------------------------------------------------
+
+.p-tag {
+  border: 1px solid transparent;
+  letter-spacing: var(--amb-tracking-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+// Each severity gets a hairline in its own hue. Combined with the icon PrimeNG
+// already renders, that is two non-colour cues per state.
+.p-tag-success {
+  border-color: var(--amb-success-border);
+}
+
+.p-tag-info {
+  border-color: var(--amb-info-border);
+}
+
+.p-tag-warn {
+  border-color: var(--amb-warn-border);
+}
+
+.p-tag-danger {
+  border-color: var(--amb-danger-border);
+}
+
+.p-tag-secondary {
+  border-color: var(--amb-border-strong);
+}
+
+.p-message,
+.p-toast-message-content {
+  -webkit-backdrop-filter: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
+  backdrop-filter: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
+}
+
+// The toast stack clears the topbar rather than starting under it.
+.p-toast {
+  max-width: calc(100vw - var(--amb-space-8));
+}
+
+@include m.respond-below(t.$amb-bp-sm) {
+  .p-toast {
+    width: calc(100vw - var(--amb-space-6));
+    max-width: none;
+  }
+}
+
+// -- 8. Skeleton -----------------------------------------------------------
+//
+// A placeholder is a well, not a card: same sunken treatment as an input, with
+// the shimmer sweeping across it. PrimeNG's own animation is replaced because
+// its default sweep is faster and higher-contrast than the rest of the system's
+// motion.
+
+.p-skeleton:not(.p-skeleton-animation-none)::after {
+  display: none;
+}
+
+.p-skeleton:not(.p-skeleton-animation-none) {
+  background-image: linear-gradient(
+    100deg,
+    transparent 20%,
+    var(--amb-skeleton-sheen) 50%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: amb-shimmer 2s var(--amb-ease) infinite;
+}
+
+// -- 9. Tooltip ------------------------------------------------------------
+
+.p-tooltip .p-tooltip-text {
+  font-size: var(--amb-text-sm);
+  line-height: var(--amb-leading-snug);
+  -webkit-backdrop-filter: blur(var(--amb-blur-sm));
+  backdrop-filter: blur(var(--amb-blur-sm));
+}
+
+// The arrow is coloured from a separate token per direction; all four are
+// repointed at the inverse surface so it matches the bubble.
+.p-tooltip-arrow {
+  border-top-color: var(--amb-inverse-surface) !important;
+  border-right-color: var(--amb-inverse-surface) !important;
+  border-bottom-color: var(--amb-inverse-surface) !important;
+  border-left-color: var(--amb-inverse-surface) !important;
+}
+
+// -- 10. Segmented controls ------------------------------------------------
+
+.p-selectbutton {
+  @include m.glass-sunken(var(--amb-radius-field));
+
+  display: inline-flex;
+  padding: 0.1875rem;
+  gap: 0.1875rem;
+}
+
+.p-selectbutton .p-togglebutton {
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--amb-radius-field) - 3px);
+  background: transparent;
+
+  @include m.transition;
+}
+
+.p-selectbutton .p-togglebutton-content {
+  padding: 0.3125rem var(--amb-space-3);
+  font-size: var(--amb-text-sm);
+  font-weight: var(--amb-weight-medium);
+  white-space: nowrap;
+}
+
+// The selected segment is the raised chip inside the well.
+.p-selectbutton .p-togglebutton.p-togglebutton-checked {
+  background: var(--amb-surface-solid);
+  box-shadow: var(--amb-shadow-sm), inset 0 1px 0 0 var(--amb-highlight);
+  color: var(--amb-accent-on-soft);
+}
+
+.p-selectbutton .p-togglebutton:not(.p-togglebutton-checked):not(.p-disabled):hover {
+  background: var(--amb-surface-hover);
+}
+
+// -- 11. Nesting guards ----------------------------------------------------
+//
+// The one rule that keeps layered glass from turning to mush: a PrimeNG surface
+// rendered inside another glass surface must not blur, because it would sample
+// its parent rather than the canvas.
+//
+// This is deliberately last so it wins over every blur declared above.
+
+.amb-shell__sidebar,
+.amb-shell__topbar,
+.amb-surface-1,
+.amb-surface-2,
+.amb-surface-3,
+.p-card,
+.p-panel,
+.p-dialog,
+.p-drawer,
+.amb-no-nested-blur {
+  .p-card,
+  .p-panel,
+  .p-toolbar {
+    background-image: none;
+    box-shadow: var(--amb-shadow-sm);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  // The ghost button is glass too, and it lives almost entirely on chrome — the
+  // appearance control in the rail and in the topbar are both inside a blurred
+  // surface. Left alone it would sample that surface rather than the canvas,
+  // which is the one thing this whole section exists to prevent.
+  .p-button.amb-btn--ghost {
+    background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+// An input inside a dialog or a card is already two surfaces deep; the blur
+// there buys nothing and costs a compositing layer per field.
+.p-dialog,
+.p-drawer {
+  .p-inputtext,
+  .p-textarea,
+  .p-select,
+  .p-multiselect,
+  .p-datepicker-input,
+  .p-password-input {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

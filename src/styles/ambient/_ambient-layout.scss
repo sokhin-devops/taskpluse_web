@@ -1,0 +1,406 @@
+// =========================================================================
+// Ambient UI — layout
+//
+// The application shell and the page scaffolding every screen sits in. This is
+// the file that decides how spacious the product feels: the gaps here, and the
+// `--amb-gap-*` tokens behind them, are what a page inherits rather than
+// choosing for itself.
+//
+// The shell, top to bottom:
+//
+//   <amb-background>            fixed, behind everything
+//   .amb-shell                  viewport-height grid: sidebar | main
+//     .amb-shell__sidebar       docked nav, collapses to a drawer under 900px
+//     .amb-shell__main          column: topbar over content
+//       .amb-shell__topbar      fixed height, never scrolls
+//       .amb-shell__content     the application's ONLY scroll container
+//         .amb-page             the reading column
+//
+// One scroll container is load-bearing. It is what puts the scrollbar beside
+// the content instead of down the edge of the window, and what lets the topbar
+// and sidebar stay put without `position: sticky` and its stacking-context
+// side effects.
+//
+// PrimeFlex still owns everyday layout — `flex`, `gap-*`, `col-*`, alignment.
+// What lives here is only what PrimeFlex has no opinion about: the shell, the
+// reading column, and the two content grids the product actually repeats.
+//
+// Sections
+//   1. Shell
+//   2. Sidebar
+//   3. Topbar
+//   4. Content and page
+//   5. Page header
+//   6. Sections
+//   7. Grids
+//   8. Primitives
+//   9. Bare shell (signed out)
+// =========================================================================
+
+@use 'ambient-breakpoints' as t;
+@use 'ambient-mixins' as m;
+
+// -- 1. Shell --------------------------------------------------------------
+//
+// `dvh` second so it wins where supported: on mobile `100vh` is the height with
+// the browser chrome hidden, which leaves the foot of the app permanently under
+// the address bar.
+
+.amb-shell {
+  position: relative;
+  z-index: var(--amb-z-base);
+  display: grid;
+  grid-template-columns: var(--amb-sidebar-width) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+
+  // The collapse animation. `grid-template-columns` is interpolable while the
+  // track count is unchanged, which it is — only the first track's width moves —
+  // so the rail and the content beside it stay locked together for the whole
+  // 300ms instead of the content snapping to its new width at the end.
+  //
+  // It is a layout animation, and that is the honest cost of a rail that pushes
+  // content rather than floating over it. Where it is unsupported the width
+  // simply snaps, which is the old behaviour and not a broken one.
+  @include m.transition-prop(
+    grid-template-columns,
+    var(--amb-duration-slow),
+    var(--amb-ease-soft)
+  );
+}
+
+// Collapsed: an icon strip. Wide enough for a 40px hit target plus the rail's
+// own padding, and no wider — the point is to give the width back to the page.
+//
+// This is a modifier on the shell rather than on the sidebar because the shell
+// owns the grid. `<amb-sidebar>` carries the matching state for its own contents
+// and the two are bound to the same signal.
+.amb-shell--rail {
+  --amb-sidebar-width: 4.5rem;
+}
+
+@include m.respond-below(t.$amb-bp-nav) {
+  // Under the nav breakpoint the sidebar leaves the flow entirely and becomes
+  // an overlay drawer, so the grid drops to a single column — collapsed or not.
+  .amb-shell,
+  .amb-shell--rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.amb-shell__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+// -- 2. Sidebar ------------------------------------------------------------
+//
+// A glass column against the canvas. It has no right border and no shadow of
+// its own: the content beside it sits on the canvas too, and a hard edge
+// between two translucent surfaces reads as a seam. The separation comes from
+// the tint difference alone.
+
+.amb-shell__sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--amb-space-5) var(--amb-space-3);
+  gap: var(--amb-space-6);
+  overflow-y: auto;
+  // Load-bearing during the collapse: the labels are still laid out at full
+  // width for the frame or two before they leave the flow, and this is what
+  // stops them bulging the rail as it narrows.
+  overflow-x: hidden;
+
+  background: var(--amb-surface-1);
+  border-right: 1px solid var(--amb-border-subtle);
+  -webkit-backdrop-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
+  backdrop-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
+}
+
+// Wider gutters once the rail is wide enough to have them. Kept as an override
+// on the expanded state rather than on the collapsed one so the narrow value is
+// the default and a new rail cannot come out cramped.
+.amb-shell:not(.amb-shell--rail) .amb-shell__sidebar {
+  padding-inline: var(--amb-space-4);
+}
+
+@include m.respond-below(t.$amb-bp-nav) {
+  .amb-shell__sidebar {
+    display: none;
+  }
+}
+
+// -- 3. Topbar -------------------------------------------------------------
+//
+// Below the nav breakpoint only. Above it the sidebar already carries the mark,
+// the navigation and the account, and a second bar across the top would be sixty
+// pixels of chrome with nothing in it — every page supplies its own title and
+// actions through `.amb-page-header`.
+//
+// Because the two never coexist, the account control can appear in both without
+// a screen reader ever meeting it twice.
+//
+// Fixed height and outside the scroll container, so nothing passes under it.
+
+.amb-shell__topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--amb-gap-inline);
+  height: var(--amb-topbar-height);
+  padding-inline: var(--amb-gutter);
+
+  background: var(--amb-surface-1);
+  border-bottom: 1px solid var(--amb-border-subtle);
+  -webkit-backdrop-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
+  backdrop-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
+}
+
+.amb-shell__topbar-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@include m.respond-above(t.$amb-bp-nav) {
+  .amb-shell__topbar {
+    display: none;
+  }
+}
+
+@include m.respond-below(t.$amb-bp-sm) {
+  .amb-shell__topbar {
+    padding-inline: var(--amb-space-4);
+  }
+}
+
+// -- 4. Content and page ---------------------------------------------------
+//
+// `min-height: 0` is load-bearing: a flex item's default minimum size is its
+// content, so without it a long page makes the content area grow past the
+// viewport and the whole shell scrolls again — the exact behaviour this layout
+// exists to remove.
+//
+// `scrollbar-gutter` reserves the scrollbar's width whether or not it is
+// showing, so moving between a short page and a long one does not shift the
+// content sideways.
+
+.amb-shell__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+
+  // Applies to programmatic scrolling — an in-page anchor, or a control that
+  // brings a row into view. The reset in `_ambient-base.scss` turns it off under
+  // reduced motion, where a page that slides is the whole problem.
+  scroll-behavior: smooth;
+}
+
+// The reading column. Generous top and bottom padding is most of what makes the
+// product feel spacious; the bottom is deliberately larger so the last card
+// never sits flush against the foot of the viewport.
+//
+// Its blocks arrive rather than appear: a short fade with a few pixels of
+// travel, staggered so the page assembles top-down instead of flashing into
+// place all at once. The stagger is capped at six children and 30ms a step, so
+// the last one starts 150ms in — long enough to read as sequence, short enough
+// that nobody waits for it. Suppressed entirely under reduced motion, by
+// `enter()` and `enter-stagger()` themselves.
+.amb-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--amb-gap-section);
+  width: 100%;
+  max-width: var(--amb-content-width);
+  margin-inline: auto;
+  padding: var(--amb-space-7) var(--amb-gutter) var(--amb-space-10);
+
+  > * {
+    @include m.enter(8px, var(--amb-duration-enter));
+  }
+
+  @include m.enter-stagger(6, 30ms);
+}
+
+// For a screen that is better wide than centred — the board, whose columns want
+// every pixel they can get.
+.amb-page--wide {
+  max-width: none;
+}
+
+.amb-page--narrow {
+  max-width: var(--amb-content-width-narrow);
+}
+
+// A page whose content must fill the viewport height rather than flow: the
+// board again, where each column scrolls independently.
+.amb-page--fill {
+  flex: 1 1 auto;
+  min-height: 100%;
+}
+
+@include m.respond-below(t.$amb-bp-sm) {
+  .amb-page {
+    gap: var(--amb-gap-grid);
+    padding: var(--amb-space-5) var(--amb-space-4) var(--amb-space-8);
+  }
+}
+
+// -- 5. Page header --------------------------------------------------------
+//
+// Title and supporting line on the left, actions on the right, wrapping to two
+// rows when there is not room. `align-items: flex-start` rather than centre so
+// a two-line title does not drag the buttons down the page with it.
+
+.amb-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--amb-gap-stack);
+}
+
+.amb-page-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--amb-space-1);
+  min-width: 0;
+}
+
+.amb-page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--amb-gap-tight);
+}
+
+@include m.respond-below(t.$amb-bp-xs) {
+  // Full-width actions on a phone: two half-width buttons side by side are
+  // narrower than their own labels.
+  .amb-page-header__actions {
+    width: 100%;
+
+    > * {
+      flex: 1 1 auto;
+    }
+  }
+}
+
+// -- 6. Sections -----------------------------------------------------------
+
+.amb-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--amb-gap-stack);
+}
+
+.amb-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--amb-gap-inline);
+}
+
+.amb-section-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--amb-space-1);
+  min-width: 0;
+}
+
+.amb-section-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--amb-gap-tight);
+}
+
+// -- 7. Grids --------------------------------------------------------------
+//
+// `auto-fit` with a `minmax` floor rather than a column count, so the same grid
+// serves every breakpoint without a media query and a card never drops below a
+// width its content can use. `min()` in the floor is what keeps it from
+// overflowing a 320px phone.
+
+.amb-grid {
+  display: grid;
+  gap: var(--amb-gap-grid);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+
+.amb-grid--tiles {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+}
+
+.amb-grid--halves {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+}
+
+// -- 8. Primitives ---------------------------------------------------------
+//
+// Two shapes the product repeats often enough to be worth naming, and that
+// PrimeFlex expresses only as a string of three or four utility classes.
+
+// A vertical stack at the standard rhythm.
+.amb-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--amb-gap-stack);
+}
+
+.amb-stack--tight {
+  gap: var(--amb-gap-tight);
+}
+
+// A horizontal group that wraps: filter chips, a row of buttons, a set of tags.
+.amb-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--amb-gap-tight);
+}
+
+.amb-cluster--inline {
+  gap: var(--amb-gap-inline);
+}
+
+// -- 9. Signed out ---------------------------------------------------------
+//
+// No sidebar and no topbar: the login screen is the only route reachable, and
+// showing navigation to places that would immediately bounce back would be worse
+// than showing none.
+//
+// It is a modifier on the shell rather than a second layout, so the router
+// outlet is never destroyed and recreated on sign-in — the shell keeps its one
+// scroll container across the transition.
+
+.amb-shell--signed-out {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+// The login card centres in the viewport instead of sitting at the top of a
+// column.
+//
+// Centred with `margin-block: auto` on the child rather than `align-items:
+// center` on the container. They look identical until the card is taller than
+// the viewport, at which point centring overflows it equally in both directions
+// and the top — the heading, and the first field — becomes unreachable, because
+// a scroll container cannot scroll above its own origin. Auto margins collapse
+// to zero in that case and the card simply scrolls.
+.amb-shell__content--centred {
+  display: flex;
+  justify-content: center;
+  padding: var(--amb-space-7) var(--amb-space-4);
+
+  > * {
+    width: 100%;
+    margin-block: auto;
+  }
+}

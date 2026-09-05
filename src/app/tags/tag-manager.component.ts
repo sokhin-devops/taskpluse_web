@@ -3,9 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
@@ -13,6 +11,16 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { Observable, finalize } from 'rxjs';
 
+import {
+  AmbientBadgeComponent,
+  AmbientDialogComponent,
+  AmbientEmptyStateComponent,
+  AmbientFormFieldComponent,
+  AmbientInputDirective,
+  AmbientPageComponent,
+  AmbientPageHeaderComponent,
+  AmbientTableComponent
+} from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
 import { DEFAULT_TAG_COLOR, TAG_COLOR_CHOICES, Tag, readableTextOn } from '../core/tag.model';
 import { TagService } from '../core/tag.service';
@@ -29,14 +37,20 @@ import { TagService } from '../core/tag.service';
   imports: [
     ReactiveFormsModule,
     ButtonModule,
-    CardModule,
     ConfirmDialogModule,
-    DialogModule,
     InputTextModule,
     SkeletonModule,
     TableModule,
     ToastModule,
-    TooltipModule
+    TooltipModule,
+    AmbientBadgeComponent,
+    AmbientDialogComponent,
+    AmbientEmptyStateComponent,
+    AmbientFormFieldComponent,
+    AmbientInputDirective,
+    AmbientPageComponent,
+    AmbientPageHeaderComponent,
+    AmbientTableComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './tag-manager.component.html',
@@ -196,6 +210,23 @@ export class TagManagerComponent implements OnInit {
 
   textColor(color: string): string {
     return readableTextOn(color);
+  }
+
+  /**
+   * The name field's message, or nothing while it is valid or untouched.
+   *
+   * <p>Moved out of the template so `<amb-form-field>` owns where it appears
+   * and announces it — an error that only exists as markup cannot be given
+   * {@code role="alert"} consistently across the screens that show one.</p>
+   */
+  nameError(): string | undefined {
+    const control = this.form.controls.name;
+    if (control.valid || !control.touched) {
+      return undefined;
+    }
+    return control.hasError('required')
+      ? 'Name is required.'
+      : 'Name cannot be longer than 40 characters.';
   }
 
   get dialogHeader(): string {

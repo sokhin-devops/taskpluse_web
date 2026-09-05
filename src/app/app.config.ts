@@ -3,39 +3,10 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
-import { definePreset } from '@primeng/themes';
-import Aura from '@primeng/themes/aura';
 
+import { AmbientPreset } from './ambient/ambient.preset';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
-
-/**
- * Aura with its primary ramp replaced by indigo, so one accent colour drives every
- * primary button, focus ring, active state and link in the app.
- *
- * <p>This has to be done by extending the preset rather than by redeclaring
- * {@code --p-primary-*} in a stylesheet. PrimeNG generates its theme at runtime and
- * injects it into the document head after the application's own styles, so a `:root`
- * override in `styles.scss` loses the cascade and the app silently keeps Aura's default
- * emerald — which is exactly what used to happen here.</p>
- */
-const TaskPulseTheme = definePreset(Aura, {
-  semantic: {
-    primary: {
-      50: '#eef2ff',
-      100: '#e0e7ff',
-      200: '#c7d2fe',
-      300: '#a5b4fc',
-      400: '#818cf8',
-      500: '#6366f1',
-      600: '#4f46e5',
-      700: '#4338ca',
-      800: '#3730a3',
-      900: '#312e81',
-      950: '#1e1b4b'
-    }
-  }
-});
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -47,11 +18,39 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
     providePrimeNG({
+      // The Ambient theme. Every value in it points at an `--amb-*` custom
+      // property declared in `src/styles/ambient/_ambient-tokens.scss`, so the
+      // design tokens remain the single source of truth for PrimeNG's
+      // appearance as well as the application's own. See ambient.preset.ts for
+      // why this cannot be done from a stylesheet.
       theme: {
-        preset: TaskPulseTheme,
+        preset: AmbientPreset,
         options: {
-          // Pin the app to light mode: never auto-switch on the OS preference.
-          darkModeSelector: false
+          // The class `AmbientThemeService` writes onto <html>, and the same one
+          // `_ambient-tokens.scss` redefines its scheme-dependent tokens under.
+          //
+          // Not 'system': the service resolves the OS preference itself and
+          // always writes an explicit class, because a user who has chosen light
+          // on a machine set to dark must get light. It still *follows* the OS
+          // for anyone who has chosen "system" — it watches the media query
+          // rather than sampling it once.
+          darkModeSelector: '.amb-dark',
+
+          // Wrap everything PrimeNG generates in `@layer primeng`.
+          //
+          // PrimeNG appends its <style> elements to the end of <head>, after
+          // styles.css, so without this an ambient rule at the same specificity
+          // as a PrimeNG one loses the cascade — silently, and in dozens of
+          // places. Layered CSS always loses to unlayered CSS whatever its
+          // specificity, so this makes the Ambient layer authoritative without
+          // a single `!important` or an arms race of `.p-thing.p-thing`.
+          //
+          // The order must match the declaration in `_ambient-base.scss`:
+          // the reset sits below PrimeNG, the Ambient layer above it.
+          cssLayer: {
+            name: 'primeng',
+            order: 'amb-reset, primeng'
+          }
         }
       }
     })

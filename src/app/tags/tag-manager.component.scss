@@ -1,272 +1,129 @@
 /* =========================================================================
-   Tag management screen
-   Page heading over a card holding the tag table, plus the create/edit dialog.
+   Tag manager
 
-   Colours, radii and spacing come from the global tokens in src/styles.scss.
+   A short table of tags and the dialog that creates or edits one. The page
+   column, the table frame, the states, the chips, the dialog and the form
+   fields are all Ambient components; what is left here is the two columns this
+   table has and the colour picker, which exists nowhere else.
 
    Sections
-     1. Page frame
-     2. Heading
-     3. Card shell
-     4. Table cells
-     5. Chips
-     6. Dialog form
-     7. Colour swatches
-     8. Empty / error states
-     9. Responsive
+     1. Table columns
+     2. Task count
+     3. Row actions
+     4. Colour picker
+     5. Preview
    ========================================================================= */
+
+@use 'ambient' as amb;
 
 :host {
   display: block;
 }
 
-/* -- 1. Page frame -------------------------------------------------------- */
+/* -- 1. Table columns ----------------------------------------------------- */
 
-.tp-page__inner {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  /* Narrower than the shell's column: the table has three short columns and
-     would otherwise be mostly whitespace. */
-  max-width: 44rem;
-}
-
-/* -- 2. Heading ----------------------------------------------------------- */
-
-.tp-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.tp-header__text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-
-.tp-header__title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  color: var(--tp-text);
-}
-
-.tp-header__summary {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--tp-text-muted);
-}
-
-/* -- 3. Card shell -------------------------------------------------------- */
-
-:host ::ng-deep .tp-card {
-  overflow: hidden;
-  border: 1px solid var(--tp-border);
-  border-radius: var(--tp-radius);
-  background: var(--tp-surface);
-  box-shadow: var(--tp-shadow);
-}
-
-:host ::ng-deep .tp-card .p-card-body {
-  padding: 0;
-  gap: 0;
-}
-
-:host ::ng-deep .tp-card .p-card-content {
-  padding: 0;
-}
-
-:host ::ng-deep .tp-table .p-datatable-tbody > tr > td {
-  vertical-align: middle;
-}
-
-/* -- 4. Table cells ------------------------------------------------------- */
-
-.tp-col-count {
+.tags-col-count {
   width: 7rem;
   white-space: nowrap;
 }
 
-.tp-col-actions {
+.tags-col-actions {
   width: 7rem;
   text-align: right;
 }
 
-.tp-count {
-  font-size: 0.875rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--tp-text-muted);
+/* Per-cell labels for the stacked layout. PrimeNG reveals these itself under
+   the breakpoint; they must stay hidden while the real header row is visible. */
+.p-datatable-column-title {
+  display: none;
+  font-size: var(--amb-text-sm);
+  font-weight: var(--amb-weight-semibold);
+  color: var(--amb-text-subtle);
 }
 
-.tp-count--zero {
-  font-size: 0.8125rem;
-  color: var(--tp-text-subtle);
+/* -- 2. Task count -------------------------------------------------------- */
+
+.tags-count {
+  font-size: var(--amb-text-base);
+  color: var(--amb-text);
 }
 
-.tp-actions {
+/* "Unused" is a word, not a zero, because 0 in a count column reads as a
+   measurement and this is a state. Muted and italic so it is clearly not a
+   number in the same series as the others. */
+.tags-count--zero {
+  font-size: var(--amb-text-sm);
+  font-style: italic;
+  color: var(--amb-text-subtle);
+}
+
+/* -- 3. Row actions ------------------------------------------------------- */
+
+.tags-actions {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.25rem;
+  gap: var(--amb-space-1);
 }
 
-/* Per-cell labels for the stacked layout below 640px. */
-.p-datatable-column-title {
-  display: none;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--tp-text-muted);
-}
+/* -- 4. Colour picker ----------------------------------------------------- */
 
-.tp-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* -- 5. Chips -------------------------------------------------------------
-   The chip's background is the tag's own colour; the text colour is computed
-   for contrast against it (readableTextOn in tag.model.ts) rather than fixed
-   to white, which would vanish on the lighter hues.
-   ------------------------------------------------------------------------- */
-
-.tp-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.1875rem 0.625rem;
-  border-radius: 999px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
-.tp-chip--preview {
-  align-self: flex-start;
-}
-
-/* -- 6. Dialog form ------------------------------------------------------- */
-
-.tp-form {
+.tags-form {
   display: flex;
   flex-direction: column;
-  gap: 1.125rem;
-  padding-top: 0.25rem;
+  gap: var(--amb-gap-grid);
+  padding-top: var(--amb-space-1);
 }
 
-.tp-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.tp-field__label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--tp-text);
-}
-
-.tp-field__error {
-  font-size: 0.8125rem;
-  color: var(--p-red-500, #ef4444);
-}
-
-.tp-form input.ng-invalid.ng-touched {
-  border-color: var(--p-red-400, #f87171);
-  transition: border-color var(--tp-transition);
-}
-
-/* -- 7. Colour swatches --------------------------------------------------- */
-
-.tp-swatches {
+/* A wrapping row rather than a fixed grid: the palette can grow or shrink
+   without this rule needing to know how many hues are in it. */
+.tags-swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--amb-space-2);
 }
 
-.tp-swatch {
+.tags-swatch {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.125rem;
+  height: 2.125rem;
   padding: 0;
-  border: 2px solid transparent;
-  border-radius: 0.5rem;
+  border: 1px solid var(--amb-swatch-ring);
+  border-radius: var(--amb-radius-md);
   cursor: pointer;
 
+  @include amb.transition;
+  @include amb.focusable;
+
+  &:hover {
+    transform: translateY(var(--amb-lift));
+    box-shadow: var(--amb-shadow-sm);
+  }
+
   i {
-    font-size: 0.75rem;
+    font-size: var(--amb-text-sm);
     line-height: 1;
   }
-
-  &:focus-visible {
-    outline: 2px solid var(--p-primary-color);
-    outline-offset: 2px;
-  }
 }
 
-/* The selected swatch carries a ring *and* a checkmark: a ring alone would be
-   the only cue, and it is nearly invisible against the lighter colours. */
-.tp-swatch--active {
-  border-color: var(--tp-text);
+/* The chosen hue is marked with a ring and the tick inside it, so the selection
+   does not depend on noticing which of eight swatches looks slightly different.
+   The tick's own colour is computed for contrast against the swatch. */
+.tags-swatch--active {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--amb-surface-solid), 0 0 0 4px var(--amb-accent);
 }
 
-/* -- 8. Empty / error states ---------------------------------------------- */
+/* -- 5. Preview ----------------------------------------------------------- */
 
-.tp-state {
+/* The chip on a well, so it is judged against a surface rather than floating on
+   the dialog — which is closer to how it will actually appear in a task row. */
+.tags-preview {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 3.5rem 1.5rem 4rem;
-  text-align: center;
-}
+  padding: var(--amb-space-3);
 
-.tp-state__icon {
-  font-size: 2.25rem;
-  line-height: 1;
-  color: var(--p-primary-color);
-}
-
-.tp-state__icon--error {
-  color: var(--p-red-500, #ef4444);
-}
-
-.tp-state__title {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--tp-text);
-}
-
-.tp-state__text {
-  margin: 0 0 0.5rem;
-  max-width: 30rem;
-  color: var(--tp-text-muted);
-}
-
-/* -- 9. Responsive -------------------------------------------------------- */
-
-@media (max-width: 480px) {
-  .tp-header__title {
-    font-size: 1.3125rem;
-  }
-
-  .tp-state {
-    padding: 2.75rem 1.25rem 3rem;
-  }
+  @include amb.glass-sunken(var(--amb-radius-md));
 }

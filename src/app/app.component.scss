@@ -1,261 +1,201 @@
 /* =========================================================================
    Application shell
-   A fixed top bar — wordmark, main navigation, account avatar — above the one
-   scrolling content column. The bar is not rendered at all while signed out.
-   Colours come from the global tokens defined in src/styles.scss.
 
-   The document itself does not scroll (see html/body in src/styles.scss); this
-   host is a viewport-height flex column and .app-main is the scroll container.
+   Almost nothing. The shell's grid, its sidebar, its topbar and its scroll
+   container are all in `_ambient-layout.scss`, and the navigation rail is
+   `<amb-sidebar>`. What is left here is the account block, which is specific to
+   this application rather than to the design system: another product using the
+   Ambient layer would put something else in the same slot.
 
    Sections
-     1. Top bar
-     2. Wordmark
-     3. Navigation
-     4. Account avatar
-     5. Content column
-     6. Responsive
+     1. Host
+     2. Account block (desktop rail)
+     2b. Collapsed rail
+     3. Account button (mobile topbar)
+     4. Topbar wordmark
+     5. Account menu
    ========================================================================= */
 
-/* A fixed-height column: the bar takes the space it needs, .app-main takes the
-   rest and scrolls. dvh comes second so it wins where supported — on mobile,
-   100vh is the height with the browser chrome hidden, which leaves the bottom of
-   the app permanently under the address bar. */
+@use 'ambient' as amb;
+
+/* -- 1. Host -------------------------------------------------------------- */
+
+/* `contents` so the shell's grid is the real one. A block host here would sit
+   between `.amb-shell` and the viewport and swallow the viewport height the grid
+   is sized against. */
 :host {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
+  display: contents;
 }
 
-/* -- 1. Top bar ---------------------------------------------------------- */
+/* -- 2. Account block (desktop rail) -------------------------------------- */
 
-/* Not sticky any more, and it does not need to be: the bar sits outside the
-   scroll container, so nothing ever passes underneath it. The translucent
-   backdrop went with it for the same reason — there is nothing behind it to
-   show through. */
-.app-bar {
-  flex: none;
-  background: var(--tp-surface);
-  border-bottom: 1px solid var(--tp-border);
-}
+/* The rail's footer: the appearance control, then the account.
 
-.app-bar__inner {
-  max-width: var(--tp-container-width);
-  margin: 0 auto;
-  padding: 0 1.25rem;
-  height: 3.5rem;
+   `min-width: 0` on the account trigger and not on the row itself — the theme
+   button keeps its size and the identity absorbs whatever is left, which is what
+   stops a long email pushing the button off the rail. */
+.app-footer {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-}
-
-.app-bar__account {
-  margin-left: auto;
-}
-
-/* -- 2. Wordmark --------------------------------------------------------- */
-
-.wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-  user-select: none;
-  color: inherit;
-
-  &:hover {
-    text-decoration: none;
-  }
-}
-
-.wordmark__badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.5rem;
-  background: var(--p-primary-color);
-  color: var(--p-primary-contrast-color);
-
-  i {
-    font-size: 1rem;
-    line-height: 1;
-  }
-}
-
-.wordmark__name {
-  font-size: 1.0625rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--tp-text);
-}
-
-/* -- 3. Navigation -------------------------------------------------------- */
-
-.app-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+  gap: var(--amb-space-2);
   min-width: 0;
 }
 
-.app-nav__link {
-  display: inline-flex;
+/* A row at the foot of the rail: avatar, then the identity, then the affordance
+   that says it opens something. */
+.app-account__trigger {
+  /* Positioned so the identity, which leaves the flow when the rail collapses,
+     resolves against this button rather than against the shell. */
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4375rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--tp-text-muted);
-  white-space: nowrap;
+  gap: var(--amb-space-3);
+  width: 100%;
+  padding: var(--amb-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--amb-radius-md);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 
-  i {
-    font-size: 0.9375rem;
-    line-height: 1;
-  }
+  @include amb.transition;
+  @include amb.focusable;
 
   &:hover {
-    background: var(--p-primary-50);
-    color: var(--p-primary-700);
+    border-color: var(--amb-border);
+    background: var(--amb-surface-hover);
+  }
+}
+
+/* `min-width: 0` on both the column and its children: without it a long email
+   forces the flex item wider than the rail instead of being truncated. */
+.app-account__identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.app-account__name {
+  font-size: var(--amb-text-sm);
+  font-weight: var(--amb-weight-semibold);
+  color: var(--amb-text);
+
+  @include amb.truncate;
+}
+
+.app-account__email {
+  font-size: var(--amb-text-xs);
+  color: var(--amb-text-subtle);
+
+  @include amb.truncate;
+}
+
+.app-account__caret {
+  flex: none;
+  font-size: var(--amb-text-xs);
+  color: var(--amb-text-subtle);
+}
+
+/* -- 2b. Collapsed rail ---------------------------------------------------
+   The account block reduces to its avatar, and the appearance control stacks
+   above it because two 38px buttons will not sit side by side in a 48px rail.
+
+   The identity leaves the flow rather than being hidden, for the same reason
+   the nav labels do: `display: none` would take the name and the email out of
+   the accessibility tree along with them, and the button's own aria-label is
+   not a substitute for the account actually being announced.
+
+   Keyed off a class bound in the template rather than off `.amb-shell--rail`
+   from an ancestor, so the selector stays inside this component and does not
+   depend on how Angular scopes a descendant combinator.
+   ------------------------------------------------------------------------- */
+
+.app-footer--rail {
+  flex-direction: column;
+  gap: var(--amb-space-1);
+
+  .app-account__trigger {
+    justify-content: center;
+    /* No inline padding: a 36px avatar does not fit in a 48px rail once 8px of
+       padding is taken off each side. */
+    padding-inline: 0;
+  }
+
+  .app-account__identity,
+  .app-account__caret {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.app-account__identity,
+.app-account__caret {
+  @include amb.transition-prop(opacity, var(--amb-duration-base));
+}
+
+/* -- 3. Account button (mobile topbar) ------------------------------------ */
+
+/* The same account, reduced to its avatar. Only rendered below the nav
+   breakpoint, where the rail — and so the block above — is not on screen. */
+.app-account__avatar-button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: var(--amb-radius-md);
+  background: transparent;
+  cursor: pointer;
+
+  @include amb.transition;
+  @include amb.focusable;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+/* -- 3b. Guest bar (signed out) ------------------------------------------- */
+
+/* Just the appearance control, top right, over the ambient canvas. No surface:
+   the login card is the only object on screen and this must not compete with it.
+   `flex: none` so it keeps its height while the card centres in what is left. */
+.app-guest-bar {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--amb-space-4) var(--amb-gutter) 0;
+}
+
+/* -- 4. Topbar wordmark --------------------------------------------------- */
+
+.app-topbar__brand {
+  font-size: var(--amb-text-lg);
+  font-weight: var(--amb-weight-semibold);
+  letter-spacing: var(--amb-tracking-snug);
+  color: var(--amb-text);
+
+  &:hover {
+    color: var(--amb-text);
     text-decoration: none;
   }
 }
 
-/* The active screen is marked with both weight and a tinted pill: colour alone
-   would be the only cue for anyone who cannot distinguish it. */
-.app-nav__link--active {
-  background: var(--p-primary-50);
-  color: var(--p-primary-700);
-  font-weight: 600;
-}
-
-/* -- 4. Account avatar ---------------------------------------------------- */
-
-.tp-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.125rem;
-  height: 2.125rem;
-  padding: 0;
-  border: 1px solid var(--tp-border);
-  border-radius: 999px;
-  background: var(--p-primary-50);
-  color: var(--p-primary-700);
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--p-primary-100);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--p-primary-color);
-    outline-offset: 2px;
-  }
-}
+/* -- 5. Account menu ------------------------------------------------------ */
 
 /* The email line in the account menu is a label, not a command: it should read
-   as muted text rather than a disabled action the user might try to click. */
-:host ::ng-deep .tp-account__email .p-menu-item-link {
+   as muted text rather than a disabled action someone might try to click.
+
+   `::ng-deep` is unavoidable here — PrimeNG appends the popup to `<body>`, well
+   outside this component's scoped styles. It is scoped by the class the menu
+   item itself carries, so it cannot reach anything else. */
+:host ::ng-deep .app-account__email-item .p-menu-item-link {
   cursor: default;
-  opacity: 1;
 }
 
-:host ::ng-deep .tp-account__email .p-menu-item-label {
-  font-size: 0.8125rem;
-  color: var(--tp-text-muted);
-}
-
-/* -- 5. Content column ---------------------------------------------------- */
-
-/* The application's single scroll container.
-
-   min-height: 0 is load-bearing: a flex item's default minimum size is its
-   content, so without it a long page makes .app-main grow past the viewport and
-   the whole shell scrolls again — the exact behaviour this layout removes.
-
-   scrollbar-gutter reserves the scrollbar's width whether or not it is showing,
-   so navigating between a short page and a long one does not shift the content
-   sideways. */
-.app-main {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-gutter: stable;
-  padding: 2rem 0 4rem;
-}
-
-.app-container {
-  max-width: var(--tp-container-width);
-  margin: 0 auto;
-  padding: 0 1.25rem;
-}
-
-/* Every screen shares this column width, including the dashboard and the board.
-   Both used to declare a wider max-width of their own, which did nothing: this
-   container clamps them first. Widening it here instead would leave the bar's
-   own inner column narrower than the content below it. */
-
-/* Signed out there is no bar and no navigation, so the login card centres in the
-   whole viewport instead of sitting in the content column. */
-.app-main--bare {
-  padding: 0;
-}
-
-/* Signed out there is no bar, so the scroll area is the full viewport height.
-   The explicit height gives the login screen a definite box to centre its card
-   in, instead of it reaching for 100vh and overflowing by the bar's height. */
-.app-container--bare {
-  max-width: none;
-  height: 100%;
-  padding: 0;
-}
-
-/* -- 6. Responsive -------------------------------------------------------- */
-
-@media (max-width: 900px) {
-  .app-bar__inner {
-    gap: 0.75rem;
-  }
-
-  /* Icons only: four labelled links do not fit beside the wordmark, and dropping
-     the labels keeps every destination reachable in one tap rather than hiding
-     them behind a menu. */
-  .app-nav__label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .app-nav__link {
-    padding: 0.5rem 0.625rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .app-bar__inner,
-  .app-container {
-    padding-inline: 1rem;
-  }
-
-  .wordmark__name {
-    display: none;
-  }
-
-  .app-main {
-    padding: 1.25rem 0 3rem;
-  }
+:host ::ng-deep .app-account__email-item .p-menu-item-label {
+  font-size: var(--amb-text-xs);
+  color: var(--amb-text-muted);
 }

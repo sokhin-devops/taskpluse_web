@@ -1,0 +1,30 @@
+// =========================================================================
+// Ambient UI — the Sass API
+//
+// What a component stylesheet imports:
+//
+//   @use 'ambient' as amb;
+//
+//   :host { @include amb.glass(2); }
+//   @include amb.respond-below(amb.$amb-bp-md) { ... }
+//
+// `src/styles` is on the Sass load path (see `stylePreprocessorOptions` in
+// angular.json), so that one line works from any depth without a relative path
+// to unwind.
+//
+// This module forwards only the breakpoints and the mixins — the two things
+// that are pure Sass and emit nothing on their own. It deliberately does NOT
+// forward `ambient-tokens`, whose `:root` block would then be emitted into
+// every component's scoped stylesheet, once per component, where a `:root`
+// selector is rewritten to something that matches nothing.
+//
+// The tokens themselves are global CSS custom properties. A component reads
+// them as `var(--amb-*)`; it never needs to import them.
+//
+// The stylesheets that DO emit CSS — base, background, glass, layout,
+// components — are pulled in once by `src/styles.scss` and are not forwarded
+// here for the same reason.
+// =========================================================================
+
+@forward 'ambient-breakpoints';
+@forward 'ambient-mixins';

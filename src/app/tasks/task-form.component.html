@@ -1,55 +1,41 @@
-<p-dialog
+<amb-dialog
   [visible]="visible"
   (visibleChange)="onVisibleChange($event)"
   [header]="editing ? 'Edit task' : 'New task'"
-  [modal]="true"
-  [draggable]="false"
-  [style]="{ width: '34rem' }"
-  [breakpoints]="{ '640px': '92vw' }"
+  width="md"
 >
   <form class="task-form" [formGroup]="form" (ngSubmit)="onSubmit()">
-    <div class="field">
-      <label class="field-label" for="task-title">Title</label>
+    <amb-form-field label="Title" for="task-title" required [error]="titleError()">
       <input
         id="task-title"
         type="text"
         pInputText
+        ambInput
         formControlName="title"
-        class="w-full"
         placeholder="What needs to be done?"
         autocomplete="off"
       />
-      @if (titleControl.invalid && titleControl.touched) {
-        <small class="field-error">
-          @if (titleControl.hasError('required')) {
-            Title is required.
-          } @else {
-            Title cannot be longer than 200 characters.
-          }
-        </small>
-      }
-    </div>
+    </amb-form-field>
 
-    <div class="field">
-      <label class="field-label" for="task-description">Description</label>
+    <amb-form-field label="Description" for="task-description">
       <textarea
         id="task-description"
         pTextarea
+        ambInput
         formControlName="description"
-        class="w-full"
         rows="3"
         placeholder="Add a few details (optional)"
       ></textarea>
-    </div>
+    </amb-form-field>
 
     <!-- Status, priority and due date sit on one row: they are the three short
          "when and how much" fields, and stacking them would push the tag picker
          below the fold of the dialog. -->
-    <div class="field-row">
-      <div class="field">
-        <label class="field-label" for="task-status">Status</label>
+    <div class="task-form__row">
+      <amb-form-field label="Status" for="task-status">
         <p-select
           inputId="task-status"
+          ambSelect
           formControlName="status"
           [options]="statusChoices"
           optionLabel="label"
@@ -57,12 +43,12 @@
           appendTo="body"
           [fluid]="true"
         ></p-select>
-      </div>
+      </amb-form-field>
 
-      <div class="field">
-        <label class="field-label" for="task-priority">Priority</label>
+      <amb-form-field label="Priority" for="task-priority">
         <p-select
           inputId="task-priority"
+          ambSelect
           formControlName="priority"
           [options]="priorityChoices"
           optionLabel="label"
@@ -71,24 +57,24 @@
           [fluid]="true"
         >
           <ng-template #selectedItem let-selected>
-            <span class="choice">
+            <span class="task-form__choice">
               <i [class]="selected.icon" aria-hidden="true"></i>
               {{ selected.label }}
             </span>
           </ng-template>
           <ng-template #item let-option>
-            <span class="choice">
+            <span class="task-form__choice">
               <i [class]="option.icon" aria-hidden="true"></i>
               {{ option.label }}
             </span>
           </ng-template>
         </p-select>
-      </div>
+      </amb-form-field>
 
-      <div class="field">
-        <label class="field-label" for="task-due-date">Due date</label>
+      <amb-form-field label="Due date" for="task-due-date">
         <p-datepicker
           inputId="task-due-date"
+          ambSelect
           formControlName="dueDate"
           [showIcon]="true"
           dateFormat="yy-mm-dd"
@@ -97,14 +83,14 @@
           [showButtonBar]="true"
           placeholder="yyyy-mm-dd"
         ></p-datepicker>
-      </div>
+      </amb-form-field>
     </div>
 
-    <div class="field">
-      <label class="field-label" for="task-tags">Tags</label>
-      @if (tags().length > 0) {
+    @if (tags().length > 0) {
+      <amb-form-field label="Tags" for="task-tags">
         <p-multiselect
           inputId="task-tags"
+          ambSelect
           formControlName="tagIds"
           [options]="tags()"
           optionLabel="name"
@@ -117,36 +103,38 @@
           emptyMessage="No tags yet"
         >
           <ng-template #item let-tag>
-            <span class="choice">
-              <span class="swatch" [style.background]="tag.color" aria-hidden="true"></span>
+            <span class="task-form__choice">
+              <span class="task-form__swatch" [style.background]="tag.color" aria-hidden="true"></span>
               {{ tag.name }}
             </span>
           </ng-template>
         </p-multiselect>
-      } @else {
-        <small class="field-hint">
-          You have no tags yet. Create some on the Tags screen and they will appear here.
-        </small>
-      }
-    </div>
+      </amb-form-field>
+    } @else {
+      <amb-form-field
+        label="Tags"
+        labelId="task-tags-label"
+        hint="You have no tags yet. Create some on the Tags screen and they will appear here."
+      >
+        <!-- Nothing to choose from, so no control: the hint is the whole field. -->
+      </amb-form-field>
+    }
   </form>
 
-  <ng-template #footer>
-    <div class="flex justify-content-end gap-2">
-      <p-button
-        label="Cancel"
-        severity="secondary"
-        [text]="true"
-        [disabled]="saving"
-        (onClick)="onCancel()"
-      ></p-button>
-      <p-button
-        [label]="editing ? 'Save' : 'Create'"
-        icon="pi pi-check"
-        [disabled]="form.invalid || saving"
-        [loading]="saving"
-        (onClick)="onSubmit()"
-      ></p-button>
-    </div>
-  </ng-template>
-</p-dialog>
+  <ng-container ambDialogFooter>
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving"
+      (onClick)="onCancel()"
+    ></p-button>
+    <p-button
+      [label]="editing ? 'Save' : 'Create'"
+      icon="pi pi-check"
+      [disabled]="form.invalid || saving"
+      [loading]="saving"
+      (onClick)="onSubmit()"
+    ></p-button>
+  </ng-container>
+</amb-dialog>

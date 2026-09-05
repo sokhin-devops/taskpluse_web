@@ -1,47 +1,99 @@
-@if (isAuthenticated()) {
-  <header class="app-bar">
-    <div class="app-bar__inner">
-      <a class="wordmark" routerLink="/dashboard" aria-label="TaskPulse home">
-        <span class="wordmark__badge" aria-hidden="true">
-          <i class="pi pi-check-circle"></i>
-        </span>
-        <span class="wordmark__name">{{ appName }}</span>
-      </a>
+<!-- The ambient canvas. Fixed, behind everything, rendered once for the whole
+     application so no screen has to think about it. -->
+<amb-background />
 
-      <nav class="app-nav" aria-label="Main">
-        @for (link of navLinks; track link.path) {
-          <a
-            class="app-nav__link tp-transition"
-            [routerLink]="link.path"
-            routerLinkActive="app-nav__link--active"
-            [routerLinkActiveOptions]="{ exact: false }"
-          >
-            <i [class]="link.icon" aria-hidden="true"></i>
-            <span class="app-nav__label">{{ link.label }}</span>
-          </a>
-        }
-      </nav>
+<div
+  class="amb-shell"
+  [class.amb-shell--signed-out]="!isAuthenticated()"
+  [class.amb-shell--rail]="navCollapsed()"
+>
+  @if (isAuthenticated()) {
+    <amb-sidebar
+      [brand]="brand"
+      [links]="navLinks"
+      [(open)]="navOpen"
+      [collapsed]="navCollapsed()"
+      (collapsedChange)="setNavCollapsed($event)"
+    >
+      <!-- Desktop account block. Its counterpart in the topbar is only rendered
+           below the nav breakpoint, where this rail is hidden, so the two are
+           never both in the accessibility tree. -->
+      <div ambSidebarFooter class="app-footer" [class.app-footer--rail]="navCollapsed()">
+        <amb-theme-switcher />
 
-      <div class="app-bar__account">
         <button
           type="button"
-          class="tp-avatar tp-transition"
-          (click)="accountPanel.toggle($event)"
-          [attr.aria-label]="'Account menu for ' + (user()?.displayName ?? 'your account')"
-          aria-haspopup="true"
+          class="app-account__trigger"
+          (click)="railAccount.toggle($event)"
+          [attr.aria-label]="accountMenuLabel()"
+          aria-haspopup="menu"
+          [pTooltip]="user()?.displayName ?? 'Account'"
+          tooltipPosition="right"
+          [tooltipDisabled]="!navCollapsed()"
+          [showDelay]="250"
         >
-          {{ initials() }}
+          <amb-avatar [initials]="initials()" />
+          <span class="app-account__identity">
+            <span class="app-account__name">{{ user()?.displayName }}</span>
+            <span class="app-account__email">{{ user()?.email }}</span>
+          </span>
+          <i class="pi pi-angle-up app-account__caret" aria-hidden="true"></i>
         </button>
-        <p-menu #accountPanel [model]="accountMenu()" [popup]="true" appendTo="body"></p-menu>
+        <amb-menu #railAccount [items]="accountMenu()" popup [ariaLabel]="accountMenuLabel()" />
       </div>
-    </div>
-  </header>
-}
+    </amb-sidebar>
+  }
 
-<!-- The application's only scroll container; AppComponent sends it back to the top
-     between screens. -->
-<main class="app-main" #scrollArea [class.app-main--bare]="!isAuthenticated()">
-  <div class="app-container" [class.app-container--bare]="!isAuthenticated()">
-    <router-outlet></router-outlet>
+  <div class="amb-shell__main">
+    @if (isAuthenticated()) {
+      <!-- Mobile chrome only: hidden above the nav breakpoint by the layout. -->
+      <header class="amb-shell__topbar">
+        <p-button
+          ambButton="ghost"
+          icon="pi pi-bars"
+          [rounded]="true"
+          ariaLabel="Open navigation"
+          (onClick)="navOpen.set(true)"
+        />
+
+        <a class="app-topbar__brand" routerLink="/dashboard" [attr.aria-label]="brand.name + ' home'">
+          {{ brand.name }}
+        </a>
+
+        <span class="amb-shell__topbar-spacer"></span>
+
+        <amb-theme-switcher />
+
+        <button
+          type="button"
+          class="app-account__avatar-button"
+          (click)="topbarAccount.toggle($event)"
+          [attr.aria-label]="accountMenuLabel()"
+          aria-haspopup="menu"
+        >
+          <amb-avatar [initials]="initials()" />
+        </button>
+        <amb-menu #topbarAccount [items]="accountMenu()" popup [ariaLabel]="accountMenuLabel()" />
+      </header>
+    } @else {
+      <!-- Signed out there is no chrome to hang the appearance control on, but
+           someone who prefers dark should not have to sign in to get it. It also
+           guarantees AmbientThemeService is instantiated on every route: the
+           bootstrap script has already applied the stored theme, and this is
+           what keeps following the OS afterwards. -->
+      <div class="app-guest-bar">
+        <amb-theme-switcher />
+      </div>
+    }
+
+    <!-- The application's only scroll container; AppComponent sends it back to
+         the top between screens. -->
+    <main
+      class="amb-shell__content"
+      #scrollArea
+      [class.amb-shell__content--centred]="!isAuthenticated()"
+    >
+      <router-outlet />
+    </main>
   </div>
-</main>
+</div>

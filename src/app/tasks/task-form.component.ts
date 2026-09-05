@@ -13,13 +13,18 @@ import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Va
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
-import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { Observable, finalize } from 'rxjs';
 
+import {
+  AmbientDialogComponent,
+  AmbientFormFieldComponent,
+  AmbientInputDirective,
+  AmbientSelectDirective
+} from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
 import { Tag } from '../core/tag.model';
 import { TagService } from '../core/tag.service';
@@ -75,13 +80,16 @@ function notBlank(control: AbstractControl): ValidationErrors | null {
   selector: 'app-task-form',
   imports: [
     ReactiveFormsModule,
-    DialogModule,
     ButtonModule,
     InputTextModule,
     TextareaModule,
     DatePickerModule,
     SelectModule,
-    MultiSelectModule
+    MultiSelectModule,
+    AmbientDialogComponent,
+    AmbientFormFieldComponent,
+    AmbientInputDirective,
+    AmbientSelectDirective
   ],
   templateUrl: './task-form.component.html',
   styleUrl: './task-form.component.scss'
@@ -135,6 +143,23 @@ export class TaskFormComponent implements OnChanges {
 
   get titleControl(): AbstractControl<string, string> {
     return this.form.controls.title;
+  }
+
+  /**
+   * The title field's message, or nothing while it is valid or untouched.
+   *
+   * <p>Waiting for {@code touched} is what keeps a freshly opened "New task"
+   * dialog from greeting the user with an error about the field they have not
+   * reached yet.</p>
+   */
+  titleError(): string | undefined {
+    const control = this.titleControl;
+    if (control.valid || !control.touched) {
+      return undefined;
+    }
+    return control.hasError('required')
+      ? 'Title is required.'
+      : 'Title cannot be longer than 200 characters.';
   }
 
   get editing(): boolean {

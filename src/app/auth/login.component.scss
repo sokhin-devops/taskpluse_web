@@ -1,73 +1,67 @@
 /* =========================================================================
    Sign-in screen
-   A single centred card on the page background, shown outside the app shell
-   (no top bar, no nav) so nothing suggests there is anything to browse yet.
 
-   Colours, radii and spacing come from the global tokens in src/styles.scss.
+   One centred card on the ambient canvas, outside the application shell — no
+   rail, no topbar — so nothing suggests there is anything to browse yet.
+
+   The shell centres it (`.amb-shell__content--centred`) and the ambient canvas
+   is already behind it, so this stylesheet only has to describe the card.
 
    Sections
-     1. Page frame
-     2. Card
-     3. Heading
-     4. Mode toggle
-     5. Form fields
-     6. Responsive
+     1. Card
+     2. Heading
+     3. Mode toggle
+     4. Form
+     5. Responsive
    ========================================================================= */
 
-/* Fills the shell's scroll area, which signed out is the whole viewport. */
+@use 'ambient' as amb;
+
 :host {
   display: block;
-  height: 100%;
 }
 
-/* -- 1. Page frame --------------------------------------------------------
-   Centres the card in the space the shell gives it. Measured as a percentage
-   of that box rather than 100vh: the two are only the same number while no top
-   bar exists, and on mobile 100vh overshoots the visible viewport as well.
-   ------------------------------------------------------------------------- */
+/* -- 1. Card -------------------------------------------------------------- */
 
-.tp-auth {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100%;
-  padding: 2rem 1.25rem;
-}
-
-/* -- 2. Card -------------------------------------------------------------- */
-
-.tp-auth__card {
+/* The level-3 surface rather than a card's level 2: this is the only thing on
+   screen, so it is the most solid surface in the product rather than one object
+   among several. `.amb-surface-3` in the template supplies the glass, the border
+   and the highlight; what is here is its size and rhythm. */
+.auth-card {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--amb-gap-grid);
   width: 100%;
   max-width: 25rem;
-  padding: 2rem;
-  border: 1px solid var(--tp-border);
-  border-radius: var(--tp-radius);
-  background: var(--tp-surface);
-  box-shadow: var(--tp-shadow);
+  margin-inline: auto;
+  padding: var(--amb-space-8);
+
+  @include amb.enter(10px);
 }
 
-/* -- 3. Heading ----------------------------------------------------------- */
+/* -- 2. Heading ----------------------------------------------------------- */
 
-.tp-auth__head {
+.auth-card__head {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--amb-space-2);
   text-align: center;
 }
 
-.tp-auth__badge {
+/* The same mark as the navigation rail, one step larger. Repeating it here is
+   what makes signing in feel like arriving at the same product. */
+.auth-card__mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.75rem;
-  background: var(--p-primary-color);
-  color: var(--p-primary-contrast-color);
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: var(--amb-space-2);
+  border-radius: var(--amb-radius-lg);
+  background: linear-gradient(140deg, var(--amb-accent-500), var(--amb-accent));
+  box-shadow: var(--amb-shadow-md), inset 0 1px 0 rgb(255 255 255 / 0.25);
+  color: var(--amb-accent-contrast);
 
   i {
     font-size: 1.5rem;
@@ -75,86 +69,42 @@
   }
 }
 
-.tp-auth__title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--tp-text);
-}
-
-.tp-auth__subtitle {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--tp-text-muted);
-}
-
-:host ::ng-deep .tp-auth__notice {
+:host ::ng-deep .auth-card__notice {
   width: 100%;
 }
 
-/* -- 4. Mode toggle ------------------------------------------------------- */
+/* -- 3. Mode toggle ------------------------------------------------------- */
 
-/* Both segments share the width so the control does not resize as the labels
+/* Both segments share the width, so the control does not resize as the labels
    change length between the two modes. */
-:host ::ng-deep .tp-auth__modes {
+:host ::ng-deep .auth-card__modes {
   display: flex;
   width: 100%;
 }
 
-:host ::ng-deep .tp-auth__modes .p-togglebutton {
+:host ::ng-deep .auth-card__modes .p-togglebutton {
   flex: 1 1 0;
   justify-content: center;
 }
 
-/* -- 5. Form fields ------------------------------------------------------- */
+/* -- 4. Form -------------------------------------------------------------- */
 
-.tp-auth__form {
+.auth-card__form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--amb-gap-grid);
 }
 
-.tp-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
+/* A little more air above the submit than between the fields, so it reads as
+   the end of the form rather than one more thing to fill in. */
+:host ::ng-deep .auth-card__submit {
+  margin-top: var(--amb-space-1);
 }
 
-.tp-field__label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--tp-text);
-}
+/* -- 5. Responsive -------------------------------------------------------- */
 
-.tp-field__error {
-  font-size: 0.8125rem;
-  color: var(--p-red-500, #ef4444);
-}
-
-/* Occupies the same slot as .tp-field__error, so showing an error does not
-   shift the fields below it. */
-.tp-field__hint {
-  font-size: 0.8125rem;
-  color: var(--tp-text-subtle);
-}
-
-.tp-auth__form input.ng-invalid.ng-touched {
-  border-color: var(--p-red-400, #f87171);
-  transition: border-color var(--tp-transition);
-}
-
-/* -- 6. Responsive -------------------------------------------------------- */
-
-@media (max-width: 480px) {
-  /* Top-aligned on a short screen: centring a tall card in a short box pushes
-     its head off the top edge, where it cannot be scrolled back into view. */
-  .tp-auth {
-    align-items: flex-start;
-    padding: 1.5rem 1rem;
-  }
-
-  .tp-auth__card {
-    padding: 1.5rem;
+@include amb.respond-below(amb.$amb-bp-xs) {
+  .auth-card {
+    padding: var(--amb-space-6);
   }
 }

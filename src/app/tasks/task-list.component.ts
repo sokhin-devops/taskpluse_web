@@ -4,7 +4,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -13,11 +12,19 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
+import {
+  AmbientBadgeComponent,
+  AmbientEmptyStateComponent,
+  AmbientInputDirective,
+  AmbientPageComponent,
+  AmbientPageHeaderComponent,
+  AmbientTableComponent,
+  AmbientToolbarComponent
+} from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
 import { Tag, readableTextOn } from '../core/tag.model';
 import { TagService } from '../core/tag.service';
@@ -75,7 +82,6 @@ const DEFAULT_PAGE_SIZE = 10;
     DatePipe,
     FormsModule,
     ButtonModule,
-    CardModule,
     ConfirmDialogModule,
     IconFieldModule,
     InputIconModule,
@@ -84,10 +90,16 @@ const DEFAULT_PAGE_SIZE = 10;
     SelectButtonModule,
     SkeletonModule,
     TableModule,
-    TagModule,
     ToastModule,
     TooltipModule,
-    TaskFormComponent
+    TaskFormComponent,
+    AmbientBadgeComponent,
+    AmbientEmptyStateComponent,
+    AmbientInputDirective,
+    AmbientPageComponent,
+    AmbientPageHeaderComponent,
+    AmbientTableComponent,
+    AmbientToolbarComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './task-list.component.html',
