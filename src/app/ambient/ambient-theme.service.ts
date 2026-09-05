@@ -30,14 +30,9 @@ const DARK_CLASS = 'amb-dark';
 /** The attribute `_ambient-accents.scss` selects a palette with. */
 const ACCENT_ATTR = 'data-amb-accent';
 
-/**
- * How long the cross-fade between light and dark runs. Long enough to read as a
- * transition rather than a flash, short enough that the interface is not
- * mid-animation by the time the user looks back at it.
- */
-const SCHEME_TRANSITION_MS = 260;
-
 const DARK_QUERY = '(prefers-color-scheme: dark)';
+
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 /**
  * Owns the colour scheme and the accent palette.
@@ -56,6 +51,22 @@ const DARK_QUERY = '(prefers-color-scheme: dark)';
  * <p>Choosing "system" means the app keeps following the OS, so the media query
  * is watched rather than sampled once at startup. Someone whose machine flips to
  * dark at sunset sees the app flip with it, without a reload.</p>
+ *
+ * <h2>How the change is animated</h2>
+ *
+ * <p>Through the View Transition API, which cross-fades two complete renderings
+ * of the page on the GPU. The alternative — transitioning colour properties on
+ * every element — cannot work here: the ambient canvas, its glows, its mesh and
+ * the sheen on every glass surface are all gradients, so they would have to be
+ * animated as {@code background-image}, and interpolating a dozen full-screen
+ * gradients per frame is exactly the kind of thing that drops frames. Worse, any
+ * property-by-property cross-fade passes through a midpoint of grey text on a
+ * grey background, because each property is interpolated independently.</p>
+ *
+ * <p>Where the API is missing, or the reader has asked for less motion, the
+ * change is applied instantly. That is deliberate: a partial cross-fade, where
+ * some surfaces move and others snap, looks broken in a way that an instant
+ * swap never does.</p>
  *
  * <h2>Why the flash is handled in index.html</h2>
  *
@@ -148,17 +159,10 @@ export class AmbientThemeService {
       return;
     }
 
-    // Colour is transitioned only while the scheme is actually changing. Leaving
-    // the transition on permanently would make every hover on every surface
-    // fade, which is both slower and wrong.
-    root.classList.add('amb-scheme-changing');
-    root.classList.toggle(DARK_CLASS, isDark);
-    this.applyColorScheme(isDark);
-
-    this.document.defaultView?.setTimeout(
-      () => root.classList.remove('amb-scheme-changing'),
-      SCHEME_TRANSITION_MS
-    );
+    this.crossFade(() => {
+      root.classList.toggle(DARK_CLASS, isDark);
+      this.applyColorScheme(isDark);
+    });
   }
 
   /**
@@ -171,6 +175,37 @@ export class AmbientThemeService {
   }
 
   private applyAccent(accent: AmbientAccent): void {
-    this.document.documentElement.setAttribute(ACCENT_ATTR, accent);
+    const root = this.document.documentElement;
+
+    // Same guard as the scheme: on the first run the bootstrap script has
+    // already written this, and re-writing the identical value would start a
+    // cross-fade of nothing.
+    if (root.getAttribute(ACCENT_ATTR) === accent) {
+      return;
+    }
+
+    this.crossFade(() => root.setAttribute(ACCENT_ATTR, accent));
+  }
+
+  /**
+   * Applies a document-wide restyle as a cross-fade where the browser can do it
+   * properly, and instantly where it cannot.
+   *
+   * <p>{@code startViewTransition} takes a snapshot, runs the callback, takes a
+   * second snapshot and blends them. Nothing in the callback may depend on
+   * Angular — it runs outside change detection, after this method has already
+   * returned — which is why both callers only touch a class or an attribute on
+   * the document root and let CSS do the rest.</p>
+   */
+  private crossFade(commit: () => void): void {
+    const view = this.document.defaultView;
+    const reducedMotion = view?.matchMedia(REDUCED_MOTION_QUERY).matches ?? false;
+
+    if (reducedMotion || typeof this.document.startViewTransition !== 'function') {
+      commit();
+      return;
+    }
+
+    this.document.startViewTransition(commit);
   }
 }

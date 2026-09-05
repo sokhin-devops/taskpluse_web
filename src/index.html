@@ -10,6 +10,23 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 
   <!--
+    Inter, in the four weights the type scale uses.
+
+    Here rather than as an `@import` in styles.scss so the preload scanner finds
+    it in the document's first bytes and fetches it alongside the stylesheet
+    instead of after it. The two preconnects get the DNS lookup and the TLS
+    handshake out of the way before the font URL is even known — gstatic needs
+    `crossorigin` because font files are fetched in CORS mode, and without it
+    the browser opens a second, unused connection.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  >
+
+  <!--
     Applies the stored theme before the first paint.
 
     This has to be inline and synchronous. Angular boots after the browser has

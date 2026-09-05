@@ -23,10 +23,17 @@
 
 // -- 1. Font ---------------------------------------------------------------
 //
-// Inter, in the four weights the type scale actually uses. `display=swap` so a
-// slow font never blanks the interface.
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+// Inter is requested from `index.html`, not from here.
+//
+// A CSS `@import` cannot begin until this stylesheet has been fetched and
+// parsed, which serialises the font behind it: connect, fetch styles.css,
+// parse, connect again, fetch the font CSS, fetch the woff2 — four round trips
+// before a glyph is in the right typeface, and a visible reflow at the end of
+// them. As `<link>` elements in the head the font CSS is found by the preload
+// scanner in the document's first bytes and downloads alongside styles.css.
+//
+// The family itself is still a token: `--amb-font-family` in
+// `_ambient-tokens.scss`, which is what `body` and every control read.
 
 // -- 2. Reset --------------------------------------------------------------
 //
@@ -198,35 +205,39 @@ a {
   background: transparent;
 }
 
-// -- 4b. Colour-scheme change ----------------------------------------------
+// -- 4b. Colour-scheme and accent change ------------------------------------
 //
 // Switching between light and dark should read as the room changing, not as the
-// page reloading. This cross-fades the colours that actually differ.
+// page reloading. `AmbientThemeService` wraps the change in a view transition,
+// which cross-fades two complete renderings of the page; these rules only set
+// how long that takes.
 //
-// It is on for a quarter of a second and no longer. `AmbientThemeService` adds
-// the class immediately before flipping the scheme and removes it once the
-// transition is done, because leaving it on would make *every* hover on *every*
-// surface in the product fade — slower, and wrong: a hover should be immediate.
+// The pseudo-elements exist for the duration of the transition and nowhere else,
+// so this costs nothing at rest — unlike the per-element `transition` this
+// replaced, which had to be added and removed around every change and forced a
+// full-document restyle each way.
 //
-// The property list is deliberate. `all` would animate `backdrop-filter` and
-// `box-shadow` on hundreds of glass surfaces at once, which drops frames on
-// exactly the machines that can least afford it.
+// Only the timing is overridden. The browser's own cross-fade composites the two
+// snapshots with `plus-lighter`, which is what keeps the midpoint from dipping
+// dark; replacing the animations would lose that and gain nothing.
 
-// Guarded by the preference rather than relying on the global reduced-motion
-// reset below: this rule is `!important` and carries a class, so it would
-// otherwise outrank that reset and animate anyway for the one person who asked
-// most clearly not to be animated at.
-@media (prefers-reduced-motion: no-preference) {
-  .amb-scheme-changing,
-  .amb-scheme-changing *,
-  .amb-scheme-changing *::before,
-  .amb-scheme-changing *::after {
-    transition:
-      background-color 260ms var(--amb-ease),
-      border-color 260ms var(--amb-ease),
-      color 260ms var(--amb-ease),
-      fill 260ms var(--amb-ease),
-      stroke 260ms var(--amb-ease) !important;
+::view-transition-old(root),
+::view-transition-new(root) {
+  // Literal fallbacks: these pseudo-elements live in their own tree whose root
+  // inherits from the document element, so the tokens do resolve — but a
+  // theme swap that silently fell back to the UA's 250ms would be invisible in
+  // review, and the cost of saying so is nothing.
+  animation-duration: var(--amb-duration-slow, 300ms);
+  animation-timing-function: var(--amb-ease, ease);
+}
+
+// The service already declines to start a transition under this preference.
+// This is the belt to that pair of braces: it also covers a transition started
+// by anything else, now or later.
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
   }
 }
 

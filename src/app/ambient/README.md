@@ -68,6 +68,23 @@ it a dark-mode user sees a white flash on every reload.
 `system` is a live preference, not a startup reading: the service watches the
 media query, so an OS that flips at sunset flips the app with it.
 
+**How the change is animated.** Through the View Transition API, which blends two
+complete renderings of the page on the GPU. Do not replace this with per-element
+colour transitions — that was the first attempt and it failed twice over:
+
+- The property list is never the set of properties that change. Every gradient in
+  the product (the canvas ground, its glows, the mesh, the sheen, the vignette,
+  and the sheen on every glass surface) is a `background-image`, and depth is
+  `box-shadow`. Miss those and they snap while text and fills crawl, which reads
+  as half the UI lagging behind the other half.
+- Interpolating each property on its own passes through a midpoint of grey text
+  on a grey background. A snapshot cross-fade never does; the text stays crisp
+  the whole way.
+
+Where the API is missing, or the reader has asked for less motion, the change is
+applied instantly — a partial cross-fade looks broken in a way an instant swap
+never does.
+
 **Adding an accent palette**: add an entry to `$amb-accent-palettes` and its name
 to `AMBIENT_ACCENTS`. Nothing else, including the picker, needs to know — each
 swatch carries its own `data-amb-accent` and paints itself from the same tokens.
