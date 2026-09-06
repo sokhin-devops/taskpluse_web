@@ -2,15 +2,48 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.27.
 
-## Development server
+## Environments
 
-To start a local development server, run:
+Which backend the app talks to is decided at build time by the files in
+`src/environments/`, swapped by the `fileReplacements` entry on the production
+configuration in `angular.json`.
+
+| Build | Environment file | `apiBaseUrl` | Requests go to |
+| --- | --- | --- | --- |
+| `ng serve`, `ng build --configuration development` | `environment.ts` | `''` | Same origin, forwarded to `localhost:8082` by `proxy.conf.json` |
+| `ng build` (production is the default) | `environment.prod.ts` | `https://taskpluse-api.sokhin.site` | The deployed API, cross-origin |
+
+The services ask for relative paths such as `/api/tasks`. `apiBaseUrlInterceptor`
+(`src/app/core/api-base-url.interceptor.ts`) prefixes them with `apiBaseUrl`, so the host
+is named in exactly one place and a service added later inherits it without having to
+remember to. An empty `apiBaseUrl` leaves the URL untouched, which is what keeps local
+development same-origin and therefore free of CORS.
+
+To point a build at a different API, edit `environment.prod.ts` — and add the web origin
+to `app.cors.allowed-origins` on that API, or the browser will block every call.
+
+### Local
 
 ```bash
-ng serve
+npm install
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Serves on `http://localhost:4200` and proxies `/api` and `/v3/api-docs` to the API on
+port 8082, so the backend must be running (`./mvnw spring-boot:run` in `taskpluse_api`).
+
+### Production
+
+```bash
+npm run build
+```
+
+Writes `dist/taskpulse_web/browser/`, to be served as static files from
+`https://taskpluse-web.sokhin.site`. The host must fall back to `index.html` for unknown
+paths, otherwise reloading a route such as `/tasks` returns a 404 instead of the app.
+
+`npm run start:prod` serves the production configuration locally, which is the way to
+check against the real API before deploying.
 
 ## Code scaffolding
 
@@ -25,16 +58,6 @@ For a complete list of available schematics (such as `components`, `directives`,
 ```bash
 ng generate --help
 ```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
 ## Running unit tests
 

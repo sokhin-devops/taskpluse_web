@@ -8,6 +8,7 @@ import { providePrimeNG } from 'primeng/config';
 
 import { AmbientPreset } from './ambient/ambient.preset';
 import { routes } from './app.routes';
+import { apiBaseUrlInterceptor } from './core/api-base-url.interceptor';
 import { authInterceptor } from './core/auth/auth.interceptor';
 
 /**
@@ -32,7 +33,10 @@ export const appConfig: ApplicationConfig = {
     // and the window does not scroll in this layout. AppComponent resets the content
     // area on NavigationEnd instead.
     provideRouter(routes),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    // Order matters: apiBaseUrlInterceptor turns `/api/...` into the absolute
+    // backend URL for the current environment, and authInterceptor then attaches
+    // the bearer token to the request that is actually going to be sent.
+    provideHttpClient(withFetch(), withInterceptors([apiBaseUrlInterceptor, authInterceptor])),
     provideAnimationsAsync(),
     providePrimeNG({
       // The Ambient theme. Every value in it points at an `--amb-*` custom
