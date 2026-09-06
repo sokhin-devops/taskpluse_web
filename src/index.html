@@ -10,7 +10,7 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 
   <!--
-    Inter, in the four weights the type scale uses.
+    Inter, in the four weights the type scale uses, and Battambang for Khmer.
 
     Here rather than as an `@import` in styles.scss so the preload scanner finds
     it in the document's first bytes and fetches it alongside the stylesheet
@@ -18,32 +18,50 @@
     handshake out of the way before the font URL is even known — gstatic needs
     `crossorigin` because font files are fetched in CORS mode, and without it
     the browser opens a second, unused connection.
+
+    Both families are requested unconditionally, and that costs an English
+    reader almost nothing. Google serves each family as unicode-range subsets,
+    and a browser only downloads a subset once it has a glyph in that range to
+    paint — so in English the Battambang stylesheet is parsed, its Latin subset
+    is never fetched, and the only Khmer file that arrives is the small one
+    behind the word ខ្មែរ in the language picker. Requesting it conditionally
+    would mean injecting a <link> after Angular boots, i.e. a flash of fallback
+    Khmer on the one screen that most needs the real face.
+
+    Battambang ships 400 and 700 only, against the scale's four weights. That is
+    deliberate rather than a gap: CSS font matching resolves 500 down to 400 and
+    600 up to 700, both of which are real cut faces, so no weight is
+    synthesised and nothing is smeared.
   -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Battambang:wght@400;700&display=swap"
   >
 
   <!--
-    Applies the stored theme before the first paint.
+    Applies the stored theme and language before the first paint.
 
     This has to be inline and synchronous. Angular boots after the browser has
     already painted, so a service that applied dark mode on construction would
     still show a white screen for a beat first — the single most noticeable flaw
     a dark theme can have, and one that no amount of CSS can fix afterwards.
+    The language is here for the same reason in a different currency: it selects
+    the font stack, and deciding it after boot means Khmer's first frame is
+    painted in a fallback face and then reflows once Battambang takes over.
 
-    AmbientThemeService reads the same two keys and writes the same class and
-    attribute, so it agrees with whatever this decided and does not animate a
-    change it did not make. Keep the key names, the class and the attribute in
-    step with that service and with _ambient-tokens.scss.
+    AmbientThemeService and LocaleService read the same keys and write the same
+    class and attributes, so they agree with whatever this decided and do not
+    animate a change they did not make. Keep the key names, the class and the
+    attributes in step with those services and with _ambient-tokens.scss.
   -->
   <script>
     (function () {
       var root = document.documentElement;
       var scheme = 'system';
       var accent = 'indigo';
+      var locale = null;
 
       // Storage can throw, not merely return null: private mode and blocked
       // site data both raise on access. A theme preference is never worth a
@@ -51,6 +69,7 @@
       try {
         scheme = localStorage.getItem('amb-theme') || scheme;
         accent = localStorage.getItem('amb-accent') || accent;
+        locale = localStorage.getItem('amb-locale');
       } catch (e) {}
 
       var dark =
@@ -66,6 +85,26 @@
       // scrollbar and the space around the page are drawn to match.
       root.style.colorScheme = dark ? 'dark' : 'light';
       root.setAttribute('data-amb-accent', accent);
+
+      // No stored choice: fall back to the browser's languages, matched on the
+      // primary subtag so km-KH finds km. Nothing is written back — a guess is
+      // not a choice, and LocaleService applies exactly the same rule.
+      if (locale !== 'en' && locale !== 'km') {
+        locale = 'en';
+        var offered = navigator.languages || (navigator.language ? [navigator.language] : []);
+        for (var i = 0; i < offered.length; i++) {
+          if (String(offered[i]).split('-')[0].toLowerCase() === 'km') {
+            locale = 'km';
+            break;
+          }
+        }
+      }
+
+      // `lang` is for the browser and assistive technology; the attribute is
+      // what _ambient-tokens.scss selects the Khmer font stack with. Both, so
+      // the stylesheet is never the reason `lang` cannot change.
+      root.setAttribute('lang', locale);
+      root.setAttribute('data-amb-locale', locale);
     })();
   </script>
 </head>

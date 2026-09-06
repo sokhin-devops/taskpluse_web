@@ -24,6 +24,8 @@ import {
 import { toErrorMessage } from '../core/api-error';
 import { DEFAULT_TAG_COLOR, TAG_COLOR_CHOICES, Tag, readableTextOn } from '../core/tag.model';
 import { TagService } from '../core/tag.service';
+import { LocaleService } from '../i18n/locale.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 
 /**
  * Tag management: list, create, rename, recolour, delete.
@@ -50,7 +52,8 @@ import { TagService } from '../core/tag.service';
     AmbientInputDirective,
     AmbientPageComponent,
     AmbientPageHeaderComponent,
-    AmbientTableComponent
+    AmbientTableComponent,
+    TranslatePipe
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './tag-manager.component.html',
@@ -62,6 +65,7 @@ export class TagManagerComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(LocaleService);
 
   readonly tags = this.tagService.tags;
   readonly loading = signal(true);
@@ -71,15 +75,25 @@ export class TagManagerComponent implements OnInit {
   readonly colorChoices = TAG_COLOR_CHOICES;
   readonly skeletonRows: number[] = [0, 1, 2, 3];
 
+  /**
+   * Longest name the API accepts, mirrored so the form can say so before making
+   * a round trip. Named rather than written into the message, so the validator
+   * and the sentence describing it cannot disagree.
+   */
+  private readonly maxNameLength = 40;
+
   readonly summary = computed(() => {
     if (this.loading()) {
-      return 'Loading your tags...';
+      return this.i18n.t('tags.summary.loading');
     }
     const count = this.tags().length;
     if (count === 0) {
-      return 'No tags yet.';
+      return this.i18n.t('tags.summary.none');
     }
-    return count === 1 ? '1 tag.' : `${count} tags.`;
+    // Two keys rather than one sentence with a noun swapped in: the number
+    // agrees with more of the sentence than the noun in most languages, and
+    // Khmer has no plural at all and reuses the same string.
+    return this.i18n.t(count === 1 ? 'tags.summary.one' : 'tags.summary.other', { count });
   });
 
   /** Null while creating, the tag being edited otherwise. */
@@ -89,7 +103,7 @@ export class TagManagerComponent implements OnInit {
   readonly form = this.fb.group({
     name: this.fb.control('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(40)]
+      validators: [Validators.required, Validators.maxLength(this.maxNameLength)]
     }),
     color: this.fb.control(DEFAULT_TAG_COLOR, { nonNullable: true })
   });
@@ -113,8 +127,8 @@ export class TagManagerComponent implements OnInit {
           this.loadFailed.set(true);
           this.messageService.add({
             severity: 'error',
-            summary: 'Could not load tags',
-            detail: toErrorMessage(error, 'The TaskPulse API did not respond. Please try again.'),
+            summary: this.i18n.t('tags.error.toast'),
+            detail: toErrorMessage(error, this.i18n, 'common.error.apiDownRetry'),
             life: 5000
           });
         }
@@ -168,7 +182,7 @@ export class TagManagerComponent implements OnInit {
         next: (saved) => {
           this.messageService.add({
             severity: 'success',
-            summary: current ? 'Tag updated' : 'Tag created',
+            summary: this.i18n.t(current ? 'tags.toast.updated' : 'tags.toast.created'),
             detail: saved.name,
             life: 3000
           });
@@ -177,8 +191,8 @@ export class TagManagerComponent implements OnInit {
         error: (error: unknown) => {
           this.messageService.add({
             severity: 'error',
-            summary: current ? 'Could not update tag' : 'Could not create tag',
-            detail: toErrorMessage(error),
+            summary: this.i18n.t(current ? 'tags.error.update' : 'tags.error.create'),
+            detail: toErrorMessage(error, this.i18n),
             life: 5000
           });
         }
@@ -187,19 +201,22 @@ export class TagManagerComponent implements OnInit {
 
   onDelete(tag: Tag): void {
     const used = tag.taskCount ?? 0;
+    // Assembled from two keys so a translator controls both halves and the
+    // join between them; the consequence clause is a whole sentence, not a
+    // fragment to be glued onto another language's word order.
     const consequence =
       used === 0
-        ? 'No tasks are using it.'
-        : used === 1
-          ? 'It will be removed from 1 task, which is otherwise left alone.'
-          : `It will be removed from ${used} tasks, which are otherwise left alone.`;
+        ? this.i18n.t('tags.confirm.unused')
+        : this.i18n.t(used === 1 ? 'tags.confirm.usedOne' : 'tags.confirm.usedOther', {
+            count: used
+          });
 
     this.confirmationService.confirm({
-      header: 'Delete tag',
-      message: `Delete "${tag.name}"? ${consequence}`,
+      header: this.i18n.t('tags.confirm.header'),
+      message: this.i18n.t('tags.confirm.message', { name: tag.name, consequence }),
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
+      acceptLabel: this.i18n.t('common.delete'),
+      rejectLabel: this.i18n.t('common.cancel'),
       accept: () => this.deleteTag(tag)
     });
   }
@@ -225,18 +242,18 @@ export class TagManagerComponent implements OnInit {
       return undefined;
     }
     return control.hasError('required')
-      ? 'Name is required.'
-      : 'Name cannot be longer than 40 characters.';
+      ? this.i18n.t('tags.error.nameRequired')
+      : this.i18n.t('tags.error.nameMax', { max: this.maxNameLength });
   }
 
-  get dialogHeader(): string {
-    return this.editing() ? 'Edit tag' : 'New tag';
-  }
+  readonly dialogHeader = computed(() =>
+    this.i18n.t(this.editing() ? 'tags.dialog.edit' : 'tags.dialog.new')
+  );
 
   /** Live preview in the dialog, so the colour choice is visible before saving. */
   get previewName(): string {
     const typed = this.form.controls.name.value.trim();
-    return typed.length > 0 ? typed : 'Tag name';
+    return typed.length > 0 ? typed : this.i18n.t('tags.previewName');
   }
 
   get previewColor(): string {
@@ -253,7 +270,7 @@ export class TagManagerComponent implements OnInit {
           this.setBusy(tag.id, false);
           this.messageService.add({
             severity: 'success',
-            summary: 'Tag deleted',
+            summary: this.i18n.t('tags.toast.deleted'),
             detail: tag.name,
             life: 3000
           });
@@ -262,8 +279,10 @@ export class TagManagerComponent implements OnInit {
           this.setBusy(tag.id, false);
           this.messageService.add({
             severity: 'error',
-            summary: 'Delete failed',
-            detail: toErrorMessage(error, `"${tag.name}" could not be deleted.`),
+            summary: this.i18n.t('tags.toast.deleteFailed'),
+            detail: toErrorMessage(error, this.i18n, 'tags.toast.deleteFailedDetail', {
+              name: tag.name
+            }),
             life: 5000
           });
         }

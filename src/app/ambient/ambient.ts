@@ -96,7 +96,6 @@ export type { AmbientTab } from './ambient-tabs.component';
 export { AmbientThemeSwitcherComponent } from './ambient-theme-switcher.component';
 export {
   AMBIENT_ACCENTS,
-  AMBIENT_ACCENT_LABELS,
   AmbientThemeService
 } from './ambient-theme.service';
 export type {

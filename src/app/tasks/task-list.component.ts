@@ -37,31 +37,22 @@ import {
   TaskSortField,
   TaskStatus,
   priorityIcon,
+  priorityKey,
   prioritySeverity,
   statusIcon,
+  statusKey,
   statusSeverity,
   toDate
 } from '../core/task.model';
 import { TaskService } from '../core/task.service';
+import { LocaleService } from '../i18n/locale.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { TaskFormComponent } from './task-form.component';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary';
 
 /** The quick-filter segmented control above the table. */
 type Scope = 'all' | 'open' | 'overdue' | 'done';
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  TODO: 'To do',
-  IN_PROGRESS: 'In progress',
-  DONE: 'Done'
-};
-
-const PRIORITY_LABELS: Record<TaskPriority, string> = {
-  URGENT: 'Urgent',
-  HIGH: 'High',
-  MEDIUM: 'Medium',
-  LOW: 'Low'
-};
 
 /** How long to wait after the last keystroke before searching. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -99,7 +90,8 @@ const DEFAULT_PAGE_SIZE = 10;
     AmbientPageComponent,
     AmbientPageHeaderComponent,
     AmbientTableComponent,
-    AmbientToolbarComponent
+    AmbientToolbarComponent,
+    TranslatePipe
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './task-list.component.html',
@@ -111,6 +103,10 @@ export class TaskListComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(LocaleService);
+
+  /** Handed to the `date` pipe on the due-date column. */
+  protected readonly dateLocale = this.i18n.dateLocale;
 
   readonly tasks = signal<Task[]>([]);
   readonly totalRecords = signal(0);
@@ -142,22 +138,31 @@ export class TaskListComponent implements OnInit {
 
   private readonly searchInput = new Subject<string>();
 
-  readonly scopeOptions = [
-    { label: 'All', value: 'all' as Scope },
-    { label: 'Open', value: 'open' as Scope },
-    { label: 'Overdue', value: 'overdue' as Scope },
-    { label: 'Done', value: 'done' as Scope }
-  ];
+  // Every option list on this screen is a `computed`, not a field. Reading the
+  // catalogue inside the computation is what makes it rebuild when the language
+  // changes; a list built once in a field initialiser would keep the language it
+  // was born in until the component was destroyed.
 
-  readonly statusOptions = TASK_STATUSES.map((status) => ({
-    label: STATUS_LABELS[status],
-    value: status
-  }));
+  readonly scopeOptions = computed(() => [
+    { label: this.i18n.t('tasks.scope.all'), value: 'all' as Scope },
+    { label: this.i18n.t('tasks.scope.open'), value: 'open' as Scope },
+    { label: this.i18n.t('tasks.scope.overdue'), value: 'overdue' as Scope },
+    { label: this.i18n.t('tasks.scope.done'), value: 'done' as Scope }
+  ]);
 
-  readonly priorityOptions = TASK_PRIORITIES.map((priority) => ({
-    label: PRIORITY_LABELS[priority],
-    value: priority
-  }));
+  readonly statusOptions = computed(() =>
+    TASK_STATUSES.map((status) => ({
+      label: this.i18n.t(statusKey(status)),
+      value: status
+    }))
+  );
+
+  readonly priorityOptions = computed(() =>
+    TASK_PRIORITIES.map((priority) => ({
+      label: this.i18n.t(priorityKey(priority)),
+      value: priority
+    }))
+  );
 
   /** How many filters are narrowing the list, shown on the Clear button. */
   readonly activeFilterCount = computed(() => {
@@ -176,16 +181,37 @@ export class TaskListComponent implements OnInit {
 
   readonly hasFilters = computed(() => this.activeFilterCount() > 0);
 
+  /**
+   * The line under the heading: how many tasks, and whether they are filtered.
+   *
+   * <p>The singular and plural are separate keys rather than a noun swapped
+   * into one sentence. English can get away with the latter; most languages
+   * cannot, because the number agrees with more of the sentence than the noun.
+   * Khmer has no plural at all and simply uses the same string for both, which
+   * this shape allows and a hard-coded `+ 's'` would not.</p>
+   */
   readonly summary = computed(() => {
     if (this.loading()) {
-      return 'Loading your tasks...';
+      return this.i18n.t('tasks.summary.loading');
     }
-    const total = this.totalRecords();
-    if (total === 0) {
-      return this.hasFilters() ? 'No tasks match these filters.' : 'Nothing on the list right now.';
+
+    const count = this.totalRecords();
+    if (count === 0) {
+      return this.i18n.t(
+        this.hasFilters() ? 'tasks.summary.noMatches' : 'tasks.summary.none'
+      );
     }
-    const noun = total === 1 ? 'task' : 'tasks';
-    return this.hasFilters() ? `${total} matching ${noun}.` : `${total} ${noun} in total.`;
+
+    const one = count === 1;
+    if (this.hasFilters()) {
+      return this.i18n.t(
+        one ? 'tasks.summary.matching.one' : 'tasks.summary.matching.other',
+        { count }
+      );
+    }
+    return this.i18n.t(one ? 'tasks.summary.total.one' : 'tasks.summary.total.other', {
+      count
+    });
   });
 
   // --- dialog state ------------------------------------------------------
@@ -246,8 +272,8 @@ export class TaskListComponent implements OnInit {
           this.loadFailed.set(true);
           this.messageService.add({
             severity: 'error',
-            summary: 'Could not load tasks',
-            detail: toErrorMessage(error, 'The TaskPulse API did not respond. Please try again.'),
+            summary: this.i18n.t('tasks.error.toast'),
+            detail: toErrorMessage(error, this.i18n, 'common.error.apiDownRetry'),
             life: 5000
           });
         }
@@ -320,7 +346,9 @@ export class TaskListComponent implements OnInit {
           this.setBusy(task.id, false);
           this.messageService.add({
             severity: 'success',
-            summary: updated.completed ? 'Task completed' : 'Task reopened',
+            summary: this.i18n.t(
+              updated.completed ? 'tasks.toast.completed' : 'tasks.toast.reopened'
+            ),
             detail: updated.title,
             life: 3000
           });
@@ -332,8 +360,12 @@ export class TaskListComponent implements OnInit {
           this.setBusy(task.id, false);
           this.messageService.add({
             severity: 'error',
-            summary: 'Update failed',
-            detail: toErrorMessage(error, `"${task.title}" could not be updated.`),
+            summary: this.i18n.t('tasks.toast.updateFailed'),
+            // The sentence around the title is translated; the title itself is
+            // the user's own words and is substituted in untouched.
+            detail: toErrorMessage(error, this.i18n, 'tasks.toast.updateFailedDetail', {
+              title: task.title
+            }),
             life: 5000
           });
         }
@@ -342,11 +374,11 @@ export class TaskListComponent implements OnInit {
 
   onDelete(task: Task): void {
     this.confirmationService.confirm({
-      header: 'Delete task',
-      message: `Delete "${task.title}"? This cannot be undone.`,
+      header: this.i18n.t('tasks.confirm.header'),
+      message: this.i18n.t('tasks.confirm.message', { title: task.title }),
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
+      acceptLabel: this.i18n.t('common.delete'),
+      rejectLabel: this.i18n.t('common.cancel'),
       accept: () => this.deleteTask(task)
     });
   }
@@ -374,7 +406,16 @@ export class TaskListComponent implements OnInit {
   }
 
   dueLabel(task: Task): string {
-    return task.overdue ? 'Overdue' : 'Due today';
+    return this.i18n.t(task.overdue ? 'tasks.due.overdue' : 'tasks.due.today');
+  }
+
+  /** The API's own `statusLabel` is English-only; the enum is translated instead. */
+  statusLabel(task: Task): string {
+    return this.i18n.t(statusKey(task.status));
+  }
+
+  priorityLabel(task: Task): string {
+    return this.i18n.t(priorityKey(task.priority));
   }
 
   dueIcon(task: Task): string {
@@ -402,7 +443,7 @@ export class TaskListComponent implements OnInit {
   }
 
   toggleTooltip(task: Task): string {
-    return task.completed ? 'Mark as pending' : 'Mark as completed';
+    return this.i18n.t(task.completed ? 'tasks.markPending' : 'tasks.markDone');
   }
 
   toggleSeverity(task: Task): TagSeverity {
@@ -480,7 +521,7 @@ export class TaskListComponent implements OnInit {
           this.setBusy(task.id, false);
           this.messageService.add({
             severity: 'success',
-            summary: 'Task deleted',
+            summary: this.i18n.t('tasks.toast.deleted'),
             detail: task.title,
             life: 3000
           });
@@ -494,8 +535,10 @@ export class TaskListComponent implements OnInit {
           this.setBusy(task.id, false);
           this.messageService.add({
             severity: 'error',
-            summary: 'Delete failed',
-            detail: toErrorMessage(error, `"${task.title}" could not be deleted.`),
+            summary: this.i18n.t('tasks.toast.deleteFailed'),
+            detail: toErrorMessage(error, this.i18n, 'tasks.toast.deleteFailedDetail', {
+              title: task.title
+            }),
             life: 5000
           });
         }

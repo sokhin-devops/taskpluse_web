@@ -1,7 +1,7 @@
 /**
- * Reading and writing the small set of appearance choices the product remembers
- * across reloads: the colour scheme, the accent, and whether the navigation rail
- * is collapsed.
+ * Reading and writing the small set of choices the product remembers across
+ * reloads: the colour scheme, the accent, the interface language, and whether
+ * the navigation rail is collapsed.
  *
  * <h2>Why this is a module and not a service</h2>
  *
@@ -21,6 +21,7 @@
 export const AMBIENT_PREFERENCE_KEYS = {
   scheme: 'amb-theme',
   accent: 'amb-accent',
+  locale: 'amb-locale',
   navCollapsed: 'amb-nav-collapsed'
 } as const;
 

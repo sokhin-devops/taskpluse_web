@@ -14,15 +14,9 @@ export const AMBIENT_ACCENTS = ['indigo', 'violet', 'blue', 'teal', 'emerald', '
 
 export type AmbientAccent = (typeof AMBIENT_ACCENTS)[number];
 
-/** Human-readable names for the accent picker. */
-export const AMBIENT_ACCENT_LABELS: Record<AmbientAccent, string> = {
-  indigo: 'Indigo',
-  violet: 'Violet',
-  blue: 'Blue',
-  teal: 'Teal',
-  emerald: 'Emerald',
-  rose: 'Rose'
-};
+// The accent picker's human-readable names used to live here. They are in the
+// message catalogues now: a label shown to a user is copy, and copy that sits
+// in a service is copy that only exists in one language.
 
 /** The class `_ambient-tokens.scss` and PrimeNG's `darkModeSelector` both watch. */
 const DARK_CLASS = 'amb-dark';

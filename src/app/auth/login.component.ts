@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -23,9 +23,30 @@ import { toErrorMessage } from '../core/api-error';
 import { AuthResponse, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../core/auth/auth.model';
 import { AuthService } from '../core/auth/auth.service';
 import { TagService } from '../core/tag.service';
+import { LocaleService } from '../i18n/locale.service';
+import { MessageKey } from '../i18n/messages.en';
+import { TranslatePipe } from '../i18n/translate.pipe';
 
 /** Which half of the screen is showing. */
 type Mode = 'login' | 'register';
+
+/**
+ * A validation message: a key, and the values its placeholders need.
+ *
+ * <p>A tuple rather than a rendered string, because {@code errorFor} has to
+ * pick one of several and only the winner should be translated. It also keeps
+ * the limits — which are what the message is about — beside the key that
+ * mentions them.</p>
+ */
+type ErrorMessage = readonly [MessageKey, Record<string, string | number>?];
+
+/**
+ * Field limits the API enforces, mirrored so the form can say so before making
+ * a round trip. Named constants rather than numbers written into the message,
+ * so the validator and the sentence describing it cannot disagree.
+ */
+const MAX_NAME_LENGTH = 100;
+const MAX_EMAIL_LENGTH = 190;
 
 /** Rejects a value made only of whitespace, reusing the `required` error key. */
 function notBlank(control: AbstractControl): ValidationErrors | null {
@@ -55,7 +76,8 @@ function notBlank(control: AbstractControl): ValidationErrors | null {
     SelectButtonModule,
     ToastModule,
     AmbientFormFieldComponent,
-    AmbientInputDirective
+    AmbientInputDirective,
+    TranslatePipe
   ],
   providers: [MessageService],
   templateUrl: './login.component.html',
@@ -69,6 +91,7 @@ export class LoginComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(LocaleService);
 
   readonly minPasswordLength = MIN_PASSWORD_LENGTH;
   readonly maxPasswordLength = MAX_PASSWORD_LENGTH;
@@ -79,10 +102,10 @@ export class LoginComponent implements OnInit {
   /** Shown when the guard bounced the user here because their token had expired. */
   readonly sessionExpired = signal(false);
 
-  readonly modeOptions = [
-    { label: 'Sign in', value: 'login' as Mode },
-    { label: 'Create account', value: 'register' as Mode }
-  ];
+  readonly modeOptions = computed(() => [
+    { label: this.i18n.t('auth.signIn'), value: 'login' as Mode },
+    { label: this.i18n.t('auth.createAccount'), value: 'register' as Mode }
+  ]);
 
   readonly loginForm = this.fb.group({
     email: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
@@ -92,11 +115,11 @@ export class LoginComponent implements OnInit {
   readonly registerForm = this.fb.group({
     displayName: this.fb.control('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(100), notBlank]
+      validators: [Validators.required, Validators.maxLength(MAX_NAME_LENGTH), notBlank]
     }),
     email: this.fb.control('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.email, Validators.maxLength(190)]
+      validators: [Validators.required, Validators.email, Validators.maxLength(MAX_EMAIL_LENGTH)]
     }),
     password: this.fb.control('', {
       nonNullable: true,
@@ -122,36 +145,45 @@ export class LoginComponent implements OnInit {
   }
 
   /** The register form's standing hint, shown while the field has no error. */
-  readonly passwordHint = `${MIN_PASSWORD_LENGTH}–${MAX_PASSWORD_LENGTH} characters.`;
+  readonly passwordHint = computed(() =>
+    this.i18n.t('auth.passwordHint', {
+      min: MIN_PASSWORD_LENGTH,
+      max: MAX_PASSWORD_LENGTH
+    })
+  );
 
   loginEmailError(): string | undefined {
-    return this.errorFor(this.loginForm.controls.email, { required: 'Email is required.' });
+    return this.errorFor(this.loginForm.controls.email, {
+      required: ['auth.error.emailRequired']
+    });
   }
 
   loginPasswordError(): string | undefined {
-    return this.errorFor(this.loginForm.controls.password, { required: 'Password is required.' });
+    return this.errorFor(this.loginForm.controls.password, {
+      required: ['auth.error.passwordRequired']
+    });
   }
 
   registerNameError(): string | undefined {
     return this.errorFor(this.registerForm.controls.displayName, {
-      required: 'Your name is required.',
-      maxlength: 'Name cannot be longer than 100 characters.'
+      required: ['auth.error.nameRequired'],
+      maxlength: ['auth.error.nameMax', { max: MAX_NAME_LENGTH }]
     });
   }
 
   registerEmailError(): string | undefined {
     return this.errorFor(this.registerForm.controls.email, {
-      required: 'Email is required.',
-      email: 'Enter a valid email address.',
-      maxlength: 'Email cannot be longer than 190 characters.'
+      required: ['auth.error.emailRequired'],
+      email: ['auth.error.emailInvalid'],
+      maxlength: ['auth.error.emailMax', { max: MAX_EMAIL_LENGTH }]
     });
   }
 
   registerPasswordError(): string | undefined {
     return this.errorFor(this.registerForm.controls.password, {
-      required: 'Password is required.',
-      minlength: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
-      maxlength: `Password cannot be longer than ${MAX_PASSWORD_LENGTH} characters.`
+      required: ['auth.error.passwordRequired'],
+      minlength: ['auth.error.passwordMin', { min: MIN_PASSWORD_LENGTH }],
+      maxlength: ['auth.error.passwordMax', { max: MAX_PASSWORD_LENGTH }]
     });
   }
 
@@ -169,13 +201,18 @@ export class LoginComponent implements OnInit {
    */
   private errorFor(
     control: AbstractControl,
-    messages: Record<string, string>
+    messages: Record<string, ErrorMessage>
   ): string | undefined {
     if (control.valid || !control.touched) {
       return undefined;
     }
     // Declaration order, so `required` wins over `minlength` on an empty field.
-    return Object.entries(messages).find(([key]) => control.hasError(key))?.[1];
+    const match = Object.entries(messages).find(([key]) => control.hasError(key));
+    if (!match) {
+      return undefined;
+    }
+    const [, [key, params]] = match;
+    return this.i18n.t(key, params);
   }
 
   onSubmitLogin(): void {
@@ -184,7 +221,7 @@ export class LoginComponent implements OnInit {
       return;
     }
     const { email, password } = this.loginForm.getRawValue();
-    this.submit(this.auth.login({ email: email.trim(), password }), 'Could not sign in');
+    this.submit(this.auth.login({ email: email.trim(), password }), 'auth.error.signIn');
   }
 
   onSubmitRegister(): void {
@@ -199,11 +236,11 @@ export class LoginComponent implements OnInit {
         email: email.trim(),
         password
       }),
-      'Could not create your account'
+      'auth.error.register'
     );
   }
 
-  private submit(request$: Observable<AuthResponse>, failureSummary: string): void {
+  private submit(request$: Observable<AuthResponse>, failureSummary: MessageKey): void {
     if (this.submitting()) {
       return;
     }
@@ -224,8 +261,8 @@ export class LoginComponent implements OnInit {
         error: (error: unknown) => {
           this.messageService.add({
             severity: 'error',
-            summary: failureSummary,
-            detail: toErrorMessage(error),
+            summary: this.i18n.t(failureSummary),
+            detail: toErrorMessage(error, this.i18n),
             life: 6000
           });
         }

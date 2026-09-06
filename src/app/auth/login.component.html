@@ -7,22 +7,18 @@
     </span>
     <h1 class="amb-page-title">TaskPulse</h1>
     <p class="amb-page-subtitle">
-      {{
-        mode() === 'login'
-          ? 'Sign in to pick up where you left off.'
-          : 'Create an account to start tracking work.'
-      }}
+      {{ (mode() === 'login' ? 'auth.signInSubtitle' : 'auth.registerSubtitle') | t }}
     </p>
   </header>
 
   @if (sessionExpired()) {
     <p-message severity="warn" styleClass="auth-card__notice">
-      Your session expired. Please sign in again.
+      {{ 'auth.expired' | t }}
     </p-message>
   }
 
   <p-selectbutton
-    [options]="modeOptions"
+    [options]="modeOptions()"
     [ngModel]="mode()"
     (ngModelChange)="setMode($event)"
     [ngModelOptions]="{ standalone: true }"
@@ -30,12 +26,12 @@
     optionValue="value"
     [allowEmpty]="false"
     styleClass="auth-card__modes"
-    aria-label="Choose whether to sign in or create an account"
+    [ariaLabel]="'auth.modeGroup' | t"
   ></p-selectbutton>
 
   @if (mode() === 'login') {
     <form class="auth-card__form" [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()">
-      <amb-form-field label="Email" for="login-email" [error]="loginEmailError()">
+      <amb-form-field [label]="'auth.email' | t" for="login-email" [error]="loginEmailError()">
         <input
           id="login-email"
           type="email"
@@ -43,11 +39,15 @@
           ambInput
           formControlName="email"
           autocomplete="email"
-          placeholder="you@example.com"
+          [placeholder]="'auth.emailPlaceholder' | t"
         />
       </amb-form-field>
 
-      <amb-form-field label="Password" for="login-password" [error]="loginPasswordError()">
+      <amb-form-field
+        [label]="'auth.password' | t"
+        for="login-password"
+        [error]="loginPasswordError()"
+      >
         <p-password
           inputId="login-password"
           formControlName="password"
@@ -55,13 +55,13 @@
           [toggleMask]="true"
           [fluid]="true"
           autocomplete="current-password"
-          placeholder="Your password"
+          [placeholder]="'auth.passwordPlaceholder' | t"
         ></p-password>
       </amb-form-field>
 
       <p-button
         type="submit"
-        label="Sign in"
+        [label]="'auth.signIn' | t"
         icon="pi pi-sign-in"
         [fluid]="true"
         [loading]="submitting()"
@@ -71,7 +71,11 @@
     </form>
   } @else {
     <form class="auth-card__form" [formGroup]="registerForm" (ngSubmit)="onSubmitRegister()">
-      <amb-form-field label="Your name" for="register-name" [error]="registerNameError()">
+      <amb-form-field
+        [label]="'auth.name' | t"
+        for="register-name"
+        [error]="registerNameError()"
+      >
         <input
           id="register-name"
           type="text"
@@ -79,11 +83,15 @@
           ambInput
           formControlName="displayName"
           autocomplete="name"
-          placeholder="Sam Rivera"
+          [placeholder]="'auth.namePlaceholder' | t"
         />
       </amb-form-field>
 
-      <amb-form-field label="Email" for="register-email" [error]="registerEmailError()">
+      <amb-form-field
+        [label]="'auth.email' | t"
+        for="register-email"
+        [error]="registerEmailError()"
+      >
         <input
           id="register-email"
           type="email"
@@ -91,15 +99,15 @@
           ambInput
           formControlName="email"
           autocomplete="email"
-          placeholder="you@example.com"
+          [placeholder]="'auth.emailPlaceholder' | t"
         />
       </amb-form-field>
 
       <amb-form-field
-        label="Password"
+        [label]="'auth.password' | t"
         for="register-password"
         [error]="registerPasswordError()"
-        [hint]="passwordHint"
+        [hint]="passwordHint()"
       >
         <p-password
           inputId="register-password"
@@ -107,13 +115,13 @@
           [toggleMask]="true"
           [fluid]="true"
           autocomplete="new-password"
-          [placeholder]="'At least ' + minPasswordLength + ' characters'"
+          [placeholder]="'auth.newPasswordPlaceholder' | t: { min: minPasswordLength }"
         ></p-password>
       </amb-form-field>
 
       <p-button
         type="submit"
-        label="Create account"
+        [label]="'auth.createAccount' | t"
         icon="pi pi-user-plus"
         [fluid]="true"
         [loading]="submitting()"

@@ -41,10 +41,26 @@
    ------------------------------------------------------------------------- */
 
 /* The toolbar's start region has no growth of its own, so the search inside it
-   would sit at its basis width with the rest of the row empty beside it. */
-:host ::ng-deep .tasks-filters .p-toolbar-start {
-  flex: 1 1 20rem;
-  min-width: 0;
+   would sit at its basis width with the rest of the row empty beside it.
+
+   Only while the toolbar is a row. Below its own stacking breakpoint
+   `<amb-toolbar>` turns the flex direction to column, and a flex-basis is
+   resolved along the main axis — so this same declaration became a 320px
+   *height* floor on a phone, propping the region open around 110px of content
+   and leaving two large empty bands in the filter bar. */
+@include amb.respond-above(amb.$amb-bp-sm) {
+  :host ::ng-deep .tasks-filters .p-toolbar-start {
+    flex: 1 1 20rem;
+    min-width: 0;
+  }
+}
+
+/* Stacked, the region is only ever as tall as what is in it. */
+@include amb.respond-below(amb.$amb-bp-sm) {
+  :host ::ng-deep .tasks-filters .p-toolbar-start {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
 }
 
 /* The search grows to fill whatever the other controls leave, down to a floor
@@ -83,32 +99,40 @@
 
 /* -- 2. Table columns -----------------------------------------------------
    Widths are set on the header cells and repeated on the action cells so the
-   layout stays put as rows change. Below the table's 768px breakpoint PrimeNG
-   stacks every cell to full width, overriding these.
+   layout stays put as rows change. Below the table's stacking breakpoint
+   PrimeNG stacks every cell to full width, overriding these.
+
+   The four right-hand columns are sized to their content and nothing more,
+   because every pixel they hold is taken from the task title — the one column
+   whose content is unbounded and the only one anybody reads first. They used to
+   total 37rem, which at 900px left the title 205px and wrapped it over three
+   lines while three badges sat in the middle of visibly empty cells. Each is now
+   just past its widest real value: "IN PROGRESS" and "Sep 10, 2026" are the two
+   that set the floor.
    ------------------------------------------------------------------------- */
 
 .tasks-col-task {
   width: auto;
-  min-width: 14rem;
+  min-width: 16rem;
 }
 
 .tasks-col-priority {
-  width: 8.5rem;
+  width: 7rem;
   white-space: nowrap;
 }
 
 .tasks-col-due {
-  width: 10rem;
+  width: 8.5rem;
   white-space: nowrap;
 }
 
 .tasks-col-status {
-  width: 9.5rem;
+  width: 8rem;
   white-space: nowrap;
 }
 
 .tasks-col-actions {
-  width: 9rem;
+  width: 7.5rem;
   text-align: right;
 }
 
@@ -191,9 +215,26 @@
 }
 
 /* -- 5. Responsive --------------------------------------------------------
-   The table's own stacking is handled by PrimeNG at 768px. These rules give
-   the filter controls room on narrow screens.
+   The table's own stacking is handled by PrimeNG at the breakpoint the template
+   passes it — 900px, matching `$amb-bp-lg`. These rules give the filter
+   controls room on narrow screens and tidy the stacked rows.
    ------------------------------------------------------------------------- */
+
+/* Stacked rows put a label beside each value. Giving every label the same width
+   lines the values up with each other down the card, instead of each one
+   starting wherever its own label happened to end.
+
+   Only the label is touched. The cell itself is laid out by a stylesheet
+   PrimeNG generates at runtime and appends to <head>, keyed on the table's
+   generated id — `#<id>-table > .p-datatable-tbody > tr > td` carries an ID and
+   therefore outranks anything selectable from here. Overriding its
+   `align-items` would take an `!important`, which is a bad trade for a cosmetic
+   nudge in a system that has managed without one. */
+@include amb.respond-below(amb.$amb-bp-lg) {
+  :host ::ng-deep .tasks-table .p-datatable-tbody > tr > td > .p-datatable-column-title {
+    flex: 0 0 5rem;
+  }
+}
 
 @include amb.respond-below(amb.$amb-bp-md) {
   /* Full-width controls: side by side they would each be too narrow to read the

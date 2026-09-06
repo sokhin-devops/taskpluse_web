@@ -6,6 +6,7 @@ import {
   OnChanges,
   Output,
   SimpleChanges,
+  computed,
   inject
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -36,10 +37,14 @@ import {
   TaskRequest,
   TaskStatus,
   priorityIcon,
+  priorityKey,
+  statusKey,
   toDate,
   toDateString
 } from '../core/task.model';
 import { TaskService } from '../core/task.service';
+import { LocaleService } from '../i18n/locale.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 
 /** An option in the status or priority picker. */
 interface Choice<T> {
@@ -48,18 +53,12 @@ interface Choice<T> {
   icon?: string;
 }
 
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  TODO: 'To do',
-  IN_PROGRESS: 'In progress',
-  DONE: 'Done'
-};
-
-const PRIORITY_LABELS: Record<TaskPriority, string> = {
-  URGENT: 'Urgent',
-  HIGH: 'High',
-  MEDIUM: 'Medium',
-  LOW: 'Low'
-};
+/**
+ * Longest title the API accepts, mirrored so the form can say so before making
+ * a round trip. Named rather than written into the message, so the validator
+ * and the sentence describing it cannot disagree.
+ */
+const MAX_TITLE_LENGTH = 200;
 
 /** Rejects a title made only of whitespace, reusing the `required` error key. */
 function notBlank(control: AbstractControl): ValidationErrors | null {
@@ -89,7 +88,8 @@ function notBlank(control: AbstractControl): ValidationErrors | null {
     AmbientDialogComponent,
     AmbientFormFieldComponent,
     AmbientInputDirective,
-    AmbientSelectDirective
+    AmbientSelectDirective,
+    TranslatePipe
   ],
   templateUrl: './task-form.component.html',
   styleUrl: './task-form.component.scss'
@@ -109,25 +109,30 @@ export class TaskFormComponent implements OnChanges {
   private readonly tagService = inject(TagService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(LocaleService);
 
   /** The account's tags, kept in step by TagService. */
   readonly tags = this.tagService.tags;
 
-  readonly statusChoices: Choice<TaskStatus>[] = TASK_STATUSES.map((status) => ({
-    label: STATUS_LABELS[status],
-    value: status
-  }));
+  readonly statusChoices = computed<Choice<TaskStatus>[]>(() =>
+    TASK_STATUSES.map((status) => ({
+      label: this.i18n.t(statusKey(status)),
+      value: status
+    }))
+  );
 
-  readonly priorityChoices: Choice<TaskPriority>[] = TASK_PRIORITIES.map((priority) => ({
-    label: PRIORITY_LABELS[priority],
-    value: priority,
-    icon: priorityIcon(priority)
-  }));
+  readonly priorityChoices = computed<Choice<TaskPriority>[]>(() =>
+    TASK_PRIORITIES.map((priority) => ({
+      label: this.i18n.t(priorityKey(priority)),
+      value: priority,
+      icon: priorityIcon(priority)
+    }))
+  );
 
   readonly form = this.fb.group({
     title: this.fb.control('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(200), notBlank]
+      validators: [Validators.required, Validators.maxLength(MAX_TITLE_LENGTH), notBlank]
     }),
     description: this.fb.control('', {
       nonNullable: true,
@@ -158,8 +163,8 @@ export class TaskFormComponent implements OnChanges {
       return undefined;
     }
     return control.hasError('required')
-      ? 'Title is required.'
-      : 'Title cannot be longer than 200 characters.';
+      ? this.i18n.t('taskForm.error.titleRequired')
+      : this.i18n.t('taskForm.error.titleMax', { max: MAX_TITLE_LENGTH });
   }
 
   get editing(): boolean {
@@ -218,7 +223,9 @@ export class TaskFormComponent implements OnChanges {
         next: (result) => {
           this.messageService.add({
             severity: 'success',
-            summary: current ? 'Task updated' : 'Task created',
+            summary: this.i18n.t(
+              current ? 'taskForm.toast.updated' : 'taskForm.toast.created'
+            ),
             detail: result.title,
             life: 3000
           });
@@ -228,8 +235,10 @@ export class TaskFormComponent implements OnChanges {
         error: (error: unknown) => {
           this.messageService.add({
             severity: 'error',
-            summary: current ? 'Could not update task' : 'Could not create task',
-            detail: toErrorMessage(error),
+            summary: this.i18n.t(
+              current ? 'taskForm.error.update' : 'taskForm.error.create'
+            ),
+            detail: toErrorMessage(error, this.i18n),
             life: 5000
           });
         }

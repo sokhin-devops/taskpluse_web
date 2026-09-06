@@ -9,17 +9,25 @@
 >
   @if (isAuthenticated()) {
     <amb-sidebar
-      [brand]="brand"
-      [links]="navLinks"
+      [brand]="brand()"
+      [links]="navLinks()"
       [(open)]="navOpen"
       [collapsed]="navCollapsed()"
       (collapsedChange)="setNavCollapsed($event)"
+      [navLabel]="'nav.landmark' | t"
+      [expandLabel]="'nav.expand' | t"
+      [collapseLabel]="'nav.collapse' | t"
     >
       <!-- Desktop account block. Its counterpart in the topbar is only rendered
            below the nav breakpoint, where this rail is hidden, so the two are
            never both in the accessibility tree. -->
       <div ambSidebarFooter class="app-footer" [class.app-footer--rail]="navCollapsed()">
-        <amb-theme-switcher />
+        <div class="app-footer__settings">
+          <amb-theme-switcher />
+          <!-- The rail is 72px collapsed, which fits the globe or the tag but
+               not both; the tag becomes a tooltip, as the nav labels do. -->
+          <amb-language-switcher [compact]="navCollapsed()" />
+        </div>
 
         <button
           type="button"
@@ -27,7 +35,7 @@
           (click)="railAccount.toggle($event)"
           [attr.aria-label]="accountMenuLabel()"
           aria-haspopup="menu"
-          [pTooltip]="user()?.displayName ?? 'Account'"
+          [pTooltip]="user()?.displayName ?? ('account.label' | t)"
           tooltipPosition="right"
           [tooltipDisabled]="!navCollapsed()"
           [showDelay]="250"
@@ -52,17 +60,22 @@
           ambButton="ghost"
           icon="pi pi-bars"
           [rounded]="true"
-          ariaLabel="Open navigation"
+          [ariaLabel]="'nav.open' | t"
           (onClick)="navOpen.set(true)"
         />
 
-        <a class="app-topbar__brand" routerLink="/dashboard" [attr.aria-label]="brand.name + ' home'">
-          {{ brand.name }}
+        <a
+          class="app-topbar__brand"
+          routerLink="/dashboard"
+          [attr.aria-label]="brand().homeLabel"
+        >
+          {{ brand().name }}
         </a>
 
         <span class="amb-shell__topbar-spacer"></span>
 
         <amb-theme-switcher />
+        <amb-language-switcher />
 
         <button
           type="button"
@@ -83,6 +96,7 @@
            what keeps following the OS afterwards. -->
       <div class="app-guest-bar">
         <amb-theme-switcher />
+        <amb-language-switcher />
       </div>
     }
 

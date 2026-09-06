@@ -5,6 +5,7 @@
  * `createdAt` / `updatedAt` / `completedAt` are ISO local date-times ('yyyy-MM-ddTHH:mm:ss').
  */
 
+import { MessageKey } from '../i18n/messages.en';
 import { Tag } from './tag.model';
 
 /** Workflow column a task sits in. Matches the API enum exactly. */
@@ -187,6 +188,45 @@ export function toDate(s: string | null): Date | null {
     return null;
   }
   return new Date(year, month - 1, day);
+}
+
+/**
+ * The catalogue key naming each status, in the reader's language.
+ *
+ * <h2>Why the API's own label is not used</h2>
+ *
+ * <p>Every task arrives with `statusLabel` and `priorityLabel` already
+ * rendered — in English, because the server has no idea what language this
+ * browser is in and no mechanism to be told. Those fields are ignored
+ * everywhere in this application in favour of translating the enum beside
+ * them, which is the field that actually carries the meaning.</p>
+ *
+ * <h2>Why a map and not a template literal</h2>
+ *
+ * <p>Building the key as {@code `status.${status}`} and asserting it back to
+ * {@link MessageKey} compiles, and then quietly stops checking the one thing
+ * worth checking. Written out, a status added to the API with no catalogue
+ * entry is a build error at the point the enum changes, which is the point
+ * someone can still do something about it.</p>
+ */
+export function statusKey(status: TaskStatus): MessageKey {
+  const keys: Record<TaskStatus, MessageKey> = {
+    TODO: 'status.TODO',
+    IN_PROGRESS: 'status.IN_PROGRESS',
+    DONE: 'status.DONE'
+  };
+  return keys[status];
+}
+
+/** The catalogue key naming each priority. See {@link statusKey}. */
+export function priorityKey(priority: TaskPriority): MessageKey {
+  const keys: Record<TaskPriority, MessageKey> = {
+    URGENT: 'priority.URGENT',
+    HIGH: 'priority.HIGH',
+    MEDIUM: 'priority.MEDIUM',
+    LOW: 'priority.LOW'
+  };
+  return keys[priority];
 }
 
 /** PrimeNG `p-tag` severity used for each priority, so the mapping lives in one place. */

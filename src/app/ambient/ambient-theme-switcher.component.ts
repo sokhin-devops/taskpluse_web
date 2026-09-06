@@ -2,10 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from 
 import { ButtonModule } from 'primeng/button';
 import { Popover, PopoverModule } from 'primeng/popover';
 
+import { LocaleService } from '../i18n/locale.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { AmbientButtonDirective } from './ambient-button.directive';
 import {
   AMBIENT_ACCENTS,
-  AMBIENT_ACCENT_LABELS,
+  AmbientAccent,
   AmbientScheme,
   AmbientThemeService
 } from './ambient-theme.service';
@@ -44,7 +46,7 @@ interface SchemeOption {
  */
 @Component({
   selector: 'amb-theme-switcher',
-  imports: [ButtonModule, PopoverModule, AmbientButtonDirective],
+  imports: [ButtonModule, PopoverModule, AmbientButtonDirective, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <p-button
@@ -59,10 +61,14 @@ interface SchemeOption {
     <p-popover #panel appendTo="body" styleClass="amb-appearance">
       <div class="amb-appearance__body">
         <fieldset class="amb-appearance__group">
-          <legend class="amb-eyebrow">Appearance</legend>
+          <legend class="amb-eyebrow">{{ 'appearance.legend' | t }}</legend>
 
-          <div class="amb-appearance__schemes" role="radiogroup" aria-label="Colour scheme">
-            @for (option of schemeOptions; track option.value) {
+          <div
+            class="amb-appearance__schemes"
+            role="radiogroup"
+            [attr.aria-label]="'appearance.scheme' | t"
+          >
+            @for (option of schemeOptions(); track option.value) {
               <button
                 type="button"
                 class="amb-appearance__scheme"
@@ -79,9 +85,13 @@ interface SchemeOption {
         </fieldset>
 
         <fieldset class="amb-appearance__group">
-          <legend class="amb-eyebrow">Accent</legend>
+          <legend class="amb-eyebrow">{{ 'appearance.accentLegend' | t }}</legend>
 
-          <div class="amb-appearance__accents" role="radiogroup" aria-label="Accent colour">
+          <div
+            class="amb-appearance__accents"
+            role="radiogroup"
+            [attr.aria-label]="'appearance.accent' | t"
+          >
             @for (accent of accents; track accent) {
               <button
                 type="button"
@@ -90,8 +100,8 @@ interface SchemeOption {
                 [attr.data-amb-accent]="accent"
                 role="radio"
                 [attr.aria-checked]="theme.accent() === accent"
-                [attr.aria-label]="accentLabels[accent]"
-                [title]="accentLabels[accent]"
+                [attr.aria-label]="accentLabels()[accent]"
+                [title]="accentLabels()[accent]"
                 (click)="theme.setAccent(accent)"
               >
                 <span class="amb-appearance__swatch" aria-hidden="true"></span>
@@ -245,23 +255,57 @@ interface SchemeOption {
 })
 export class AmbientThemeSwitcherComponent {
   protected readonly theme = inject(AmbientThemeService);
+  private readonly i18n = inject(LocaleService);
 
   protected readonly accents = AMBIENT_ACCENTS;
-  protected readonly accentLabels = AMBIENT_ACCENT_LABELS;
 
-  protected readonly schemeOptions: SchemeOption[] = [
-    { value: 'light', label: 'Light', icon: 'pi pi-sun' },
-    { value: 'dark', label: 'Dark', icon: 'pi pi-moon' },
-    { value: 'system', label: 'System', icon: 'pi pi-desktop' }
-  ];
+  /**
+   * Accent names, in the current language.
+   *
+   * <p>A {@code computed} and not a constant, which is the shape every
+   * translated list in this application has: reading the catalogue inside the
+   * computation is what makes it recalculate when the language changes. The
+   * same list built in a field initialiser would keep the language it was born
+   * in for the life of the component.</p>
+   */
+  protected readonly accentLabels = computed<Record<AmbientAccent, string>>(
+    () =>
+      ({
+        indigo: this.i18n.t('appearance.accent.indigo'),
+        violet: this.i18n.t('appearance.accent.violet'),
+        blue: this.i18n.t('appearance.accent.blue'),
+        teal: this.i18n.t('appearance.accent.teal'),
+        emerald: this.i18n.t('appearance.accent.emerald'),
+        rose: this.i18n.t('appearance.accent.rose')
+      })
+  );
+
+  protected readonly schemeOptions = computed<SchemeOption[]>(() => [
+    { value: 'light', label: this.i18n.t('appearance.light'), icon: 'pi pi-sun' },
+    { value: 'dark', label: this.i18n.t('appearance.dark'), icon: 'pi pi-moon' },
+    { value: 'system', label: this.i18n.t('appearance.system'), icon: 'pi pi-desktop' }
+  ]);
 
   /** The trigger shows what is on screen, not what was chosen. */
   protected readonly triggerIcon = computed(() =>
     this.theme.isDark() ? 'pi pi-moon' : 'pi pi-sun'
   );
 
-  protected readonly triggerLabel = computed(
-    () => `Appearance: ${this.theme.resolvedScheme()} theme, ${this.theme.accent()} accent`
+  /**
+   * Names both settings and their current values.
+   *
+   * <p>Assembled from the catalogue rather than by interpolating the raw enum
+   * values, which is what it used to do. "dark" and "indigo" happened to be
+   * English words as well as identifiers, and reading an identifier out to a
+   * screen-reader user is only invisible while the interface is in English.</p>
+   */
+  protected readonly triggerLabel = computed(() =>
+    this.i18n.t('appearance.trigger', {
+      scheme: this.i18n.t(
+        this.theme.resolvedScheme() === 'dark' ? 'appearance.dark' : 'appearance.light'
+      ),
+      accent: this.accentLabels()[this.theme.accent()]
+    })
   );
 
   private readonly panel = viewChild.required<Popover>('panel');

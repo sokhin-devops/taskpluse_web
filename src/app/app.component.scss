@@ -41,6 +41,19 @@
   min-width: 0;
 }
 
+/* Appearance and language, kept together as one group.
+
+   They are the two controls that change how the product presents itself rather
+   than what it contains, and they are the only things in the rail that are not
+   navigation or identity. Grouping them means the rail collapses to a tidy
+   stack of two rather than scattering them either side of the account block. */
+.app-footer__settings {
+  display: flex;
+  align-items: center;
+  gap: var(--amb-space-1);
+  flex: none;
+}
+
 /* A row at the foot of the rail: avatar, then the identity, then the affordance
    that says it opens something. */
 .app-account__trigger {
@@ -117,6 +130,12 @@
   flex-direction: column;
   gap: var(--amb-space-1);
 
+  /* Two icon buttons do not fit side by side in a 48px rail, so the group
+     turns the same corner the footer does. */
+  .app-footer__settings {
+    flex-direction: column;
+  }
+
   .app-account__trigger {
     justify-content: center;
     /* No inline padding: a 36px avatar does not fit in a 48px rail once 8px of
@@ -165,7 +184,9 @@
 .app-guest-bar {
   flex: none;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--amb-space-1);
   padding: var(--amb-space-4) var(--amb-gutter) 0;
 }
 

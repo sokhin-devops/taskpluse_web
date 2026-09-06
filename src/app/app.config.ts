@@ -1,12 +1,29 @@
+import { registerLocaleData } from '@angular/common';
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import localeKm from '@angular/common/locales/km';
 import { providePrimeNG } from 'primeng/config';
 
 import { AmbientPreset } from './ambient/ambient.preset';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
+
+/**
+ * Khmer date, day, month and number formats.
+ *
+ * <p>Angular ships only the locale the application was built for; every other
+ * one has to be registered by hand, and asking a pipe for an unregistered
+ * locale throws at render time rather than falling back. This is what makes
+ * {@code | date: 'MMM d, y' : undefined : 'km'} work, and it is also where
+ * {@code primeng-translations.ts} reads the datepicker's month and day names
+ * from — which is why they are not typed out a second time anywhere.</p>
+ *
+ * <p>At module scope rather than inside an initialiser: it has to have run
+ * before the first template renders, and there is nothing to wait for.</p>
+ */
+registerLocaleData(localeKm);
 
 export const appConfig: ApplicationConfig = {
   providers: [

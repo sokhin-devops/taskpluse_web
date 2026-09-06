@@ -1,10 +1,10 @@
 <p-toast position="top-right"></p-toast>
 
 <amb-page>
-  <amb-page-header title="Dashboard" subtitle="Where your work stands right now.">
+  <amb-page-header [title]="'dashboard.title' | t" [subtitle]="'dashboard.subtitle' | t">
     <p-button
       icon="pi pi-refresh"
-      label="Refresh"
+      [label]="'common.refresh' | t"
       severity="secondary"
       [outlined]="true"
       [loading]="loading()"
@@ -32,11 +32,11 @@
       <amb-empty-state
         tone="error"
         icon="pi pi-exclamation-triangle"
-        title="We couldn't load your dashboard"
-        text="The TaskPulse API did not respond. Check that it is running, then try again."
+        [title]="'dashboard.error.title' | t"
+        [text]="'common.error.apiDown' | t"
       >
         <p-button
-          label="Try again"
+          [label]="'common.tryAgain' | t"
           icon="pi pi-refresh"
           [outlined]="true"
           (onClick)="reload()"
@@ -46,11 +46,11 @@
   } @else if (stats()) {
     <!-- Hero figure + KPI row. These are single numbers, so they are tiles rather
          than a bar chart of five bars. -->
-    <section class="dash-kpis" aria-label="Key figures">
+    <section class="dash-kpis" [attr.aria-label]="'dashboard.figures' | t">
       <div class="dash-hero amb-surface-2">
-        <span class="amb-eyebrow">Completion rate</span>
+        <span class="amb-eyebrow">{{ 'dashboard.completionRate' | t }}</span>
         <strong class="dash-hero__value">
-          {{ completionRate() | number: '1.0-1' }}<span class="dash-hero__unit">%</span>
+          {{ completionRate() | number: '1.0-1' : dateLocale() }}<span class="dash-hero__unit">%</span>
         </strong>
         <div
           class="dash-meter"
@@ -58,7 +58,7 @@
           [attr.aria-valuenow]="completionRate()"
           aria-valuemin="0"
           aria-valuemax="100"
-          [attr.aria-label]="'Completion rate: ' + completionCaption()"
+          [attr.aria-label]="'dashboard.completionMeter' | t: { caption: completionCaption() }"
         >
           <!-- Track is a lighter step of the fill's own ramp, so the pair reads as one
                scale rather than two competing colours. -->
@@ -80,20 +80,10 @@
     </section>
 
     <!-- Trend: change over time, two series, so a line chart with a legend. -->
-    <amb-card
-      title="Created and completed"
-      [subtitle]="
-        (chart().totalCreated | number) +
-        ' created, ' +
-        (chart().totalCompleted | number) +
-        ' completed in the last ' +
-        days() +
-        ' days'
-      "
-    >
+    <amb-card [title]="'dashboard.trend.title' | t" [subtitle]="trendSubtitle()">
       <div ambActions class="dash-chart__controls">
         <p-selectbutton
-          [options]="rangeOptions"
+          [options]="rangeOptions()"
           [ngModel]="days()"
           (ngModelChange)="onRangeChange($event)"
           [ngModelOptions]="{ standalone: true }"
@@ -101,15 +91,17 @@
           optionValue="value"
           [allowEmpty]="false"
           size="small"
-          aria-label="Trend window"
+          [ariaLabel]="'dashboard.trend.window' | t"
         ></p-selectbutton>
         <p-button
           [icon]="showTable() ? 'pi pi-chart-line' : 'pi pi-table'"
-          [label]="showTable() ? 'Chart' : 'Table'"
+          [label]="(showTable() ? 'dashboard.trend.showChart' : 'dashboard.trend.showTable') | t"
           severity="secondary"
           [text]="true"
           size="small"
-          [pTooltip]="showTable() ? 'Show the chart' : 'Show the same data as a table'"
+          [pTooltip]="
+            (showTable() ? 'dashboard.trend.showChartTip' : 'dashboard.trend.showTableTip') | t
+          "
           tooltipPosition="left"
           (onClick)="toggleTable()"
         ></p-button>
@@ -120,11 +112,11 @@
       <div class="dash-legend">
         <span class="dash-legend__item">
           <span class="dash-legend__key dash-legend__key--completed" aria-hidden="true"></span>
-          Completed
+          {{ 'dashboard.trend.completed' | t }}
         </span>
         <span class="dash-legend__item">
           <span class="dash-legend__key dash-legend__key--created" aria-hidden="true"></span>
-          Created
+          {{ 'dashboard.trend.created' | t }}
         </span>
       </div>
 
@@ -132,19 +124,25 @@
         <div class="dash-table-wrap">
           <table class="dash-table">
             <caption class="amb-sr-only">
-              Tasks created and completed per day over the last {{ days() }} days
+              {{ 'dashboard.trend.caption' | t: { days: days() } }}
             </caption>
             <thead>
               <tr>
-                <th scope="col">Day</th>
-                <th scope="col" class="amb-num dash-table__num">Completed</th>
-                <th scope="col" class="amb-num dash-table__num">Created</th>
+                <th scope="col">{{ 'dashboard.trend.day' | t }}</th>
+                <th scope="col" class="amb-num dash-table__num">
+                  {{ 'dashboard.trend.completed' | t }}
+                </th>
+                <th scope="col" class="amb-num dash-table__num">
+                  {{ 'dashboard.trend.created' | t }}
+                </th>
               </tr>
             </thead>
             <tbody>
               @for (point of chart().points; track point.date) {
                 <tr>
-                  <th scope="row">{{ asDate(point.date) | date: 'EEE d MMM' }}</th>
+                  <th scope="row">
+                    {{ asDate(point.date) | date: 'EEE d MMM' : undefined : dateLocale() }}
+                  </th>
                   <td class="amb-num dash-table__num">{{ point.completed }}</td>
                   <td class="amb-num dash-table__num">{{ point.created }}</td>
                 </tr>
@@ -158,10 +156,7 @@
             class="dash-chart__svg"
             [attr.viewBox]="'0 0 ' + chartGeometry.width + ' ' + chartGeometry.height"
             role="img"
-            [attr.aria-label]="
-              'Line chart of tasks created and completed per day over the last ' +
-              days() + ' days. Use the table view for the exact figures.'
-            "
+            [attr.aria-label]="'dashboard.trend.chartLabel' | t: { days: days() }"
             (mouseleave)="onPlotLeave()"
           >
             <!-- Gridlines: hairline, solid, one step off the surface. Recessive. -->
@@ -278,7 +273,7 @@
                 [attr.x]="chartGeometry.padLeft + plotWidth / 2"
                 [attr.y]="chartGeometry.padTop + plotHeight / 2"
                 text-anchor="middle"
-              >No activity in this window</text>
+              >{{ 'dashboard.trend.empty' | t }}</text>
             }
           </svg>
 
@@ -289,14 +284,16 @@
               [class.dash-tip--flip]="tooltipAnchor().flip"
               [style.left.%]="(hovered.x / chartGeometry.width) * 100"
             >
-              <span class="dash-tip__date">{{ asDate(hovered.date) | date: 'EEE d MMM' }}</span>
+              <span class="dash-tip__date">
+                {{ asDate(hovered.date) | date: 'EEE d MMM' : undefined : dateLocale() }}
+              </span>
               <span class="dash-tip__row">
                 <span class="dash-legend__key dash-legend__key--completed" aria-hidden="true"></span>
-                Completed <strong>{{ hovered.completed }}</strong>
+                {{ 'dashboard.trend.completed' | t }} <strong>{{ hovered.completed }}</strong>
               </span>
               <span class="dash-tip__row">
                 <span class="dash-legend__key dash-legend__key--created" aria-hidden="true"></span>
-                Created <strong>{{ hovered.created }}</strong>
+                {{ 'dashboard.trend.created' | t }} <strong>{{ hovered.created }}</strong>
               </span>
             </div>
           }
@@ -305,8 +302,11 @@
     </amb-card>
 
     <!-- Two magnitude breakdowns. One series each, so no legend and one hue. -->
-    <section class="dash-breakdowns" aria-label="Breakdowns">
-      <amb-card title="Open work by priority" subtitle="Completed tasks are left out.">
+    <section class="dash-breakdowns" [attr.aria-label]="'dashboard.breakdowns' | t">
+      <amb-card
+        [title]="'dashboard.priority.title' | t"
+        [subtitle]="'dashboard.priority.subtitle' | t"
+      >
         @if (hasOpenTasks()) {
           <ul class="dash-bars amb-list-reset">
             @for (row of priorityRows(); track row.label) {
@@ -319,16 +319,18 @@
                     [style.width.%]="row.percent"
                   ></span>
                 </span>
-                <span class="dash-bars__value">{{ row.value | number }}</span>
+                <span class="dash-bars__value">
+                  {{ row.value | number: '1.0-0' : dateLocale() }}
+                </span>
               </li>
             }
           </ul>
         } @else {
-          <p class="dash-bars__empty">Nothing open. Everything is done.</p>
+          <p class="dash-bars__empty">{{ 'dashboard.priority.empty' | t }}</p>
         }
       </amb-card>
 
-      <amb-card title="Busiest tags" subtitle="How many tasks carry each label.">
+      <amb-card [title]="'dashboard.tags.title' | t" [subtitle]="'dashboard.tags.subtitle' | t">
         @if (tagRows().length > 0) {
           <ul class="dash-bars amb-list-reset">
             @for (row of tagRows(); track row.label) {
@@ -349,13 +351,20 @@
                     [style.width.%]="row.percent"
                   ></span>
                 </span>
-                <span class="dash-bars__value">{{ row.value | number }}</span>
+                <span class="dash-bars__value">
+                  {{ row.value | number: '1.0-0' : dateLocale() }}
+                </span>
               </li>
             }
           </ul>
         } @else {
+          <!-- Three fragments around the link rather than one string carrying
+               markup: the link does not sit in the same place in every
+               language, and a translator has to be able to move it. -->
           <p class="dash-bars__empty">
-            No tags in use yet. Add some on the <a routerLink="/tags">Tags</a> screen.
+            {{ 'dashboard.tags.emptyBefore' | t }}
+            <a routerLink="/tags">{{ 'dashboard.tags.emptyLink' | t }}</a>
+            {{ 'dashboard.tags.emptyAfter' | t }}
           </p>
         }
       </amb-card>

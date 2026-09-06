@@ -7,8 +7,12 @@
 ></p-confirmdialog>
 
 <amb-page width="narrow">
-  <amb-page-header title="Tags" [subtitle]="summary()">
-    <p-button label="New tag" icon="pi pi-plus-circle" (onClick)="openCreate()"></p-button>
+  <amb-page-header [title]="'tags.title' | t" [subtitle]="summary()">
+    <p-button
+      [label]="'tags.new' | t"
+      icon="pi pi-plus-circle"
+      (onClick)="openCreate()"
+    ></p-button>
   </amb-page-header>
 
   <amb-table>
@@ -16,9 +20,11 @@
       <p-table [value]="skeletonRows" styleClass="tags-table" responsiveLayout="stack" breakpoint="640px">
         <ng-template pTemplate="header">
           <tr>
-            <th scope="col">Tag</th>
-            <th scope="col" class="tags-col-count">Tasks</th>
-            <th scope="col" class="tags-col-actions"><span class="amb-sr-only">Actions</span></th>
+            <th scope="col">{{ 'tags.col.tag' | t }}</th>
+            <th scope="col" class="tags-col-count">{{ 'tags.col.tasks' | t }}</th>
+            <th scope="col" class="tags-col-actions">
+              <span class="amb-sr-only">{{ 'common.actions' | t }}</span>
+            </th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body">
@@ -38,18 +44,27 @@
       <amb-empty-state
         tone="error"
         icon="pi pi-exclamation-triangle"
-        title="We couldn't load your tags"
-        text="The TaskPulse API did not respond. Check that it is running, then try again."
+        [title]="'tags.error.title' | t"
+        [text]="'common.error.apiDown' | t"
       >
-        <p-button label="Try again" icon="pi pi-refresh" [outlined]="true" (onClick)="reload()"></p-button>
+        <p-button
+          [label]="'common.tryAgain' | t"
+          icon="pi pi-refresh"
+          [outlined]="true"
+          (onClick)="reload()"
+        ></p-button>
       </amb-empty-state>
     } @else if (tags().length === 0) {
       <amb-empty-state
         icon="pi pi-tags"
-        title="No tags yet"
-        text="Tags group related tasks and give the list and board something to filter by."
+        [title]="'tags.empty.title' | t"
+        [text]="'tags.empty.text' | t"
       >
-        <p-button label="Create a tag" icon="pi pi-plus-circle" (onClick)="openCreate()"></p-button>
+        <p-button
+          [label]="'tags.empty.action' | t"
+          icon="pi pi-plus-circle"
+          (onClick)="openCreate()"
+        ></p-button>
       </amb-empty-state>
     } @else {
       <p-table
@@ -62,16 +77,18 @@
       >
         <ng-template pTemplate="header">
           <tr>
-            <th scope="col">Tag</th>
-            <th scope="col" class="tags-col-count">Tasks</th>
-            <th scope="col" class="tags-col-actions"><span class="amb-sr-only">Actions</span></th>
+            <th scope="col">{{ 'tags.col.tag' | t }}</th>
+            <th scope="col" class="tags-col-count">{{ 'tags.col.tasks' | t }}</th>
+            <th scope="col" class="tags-col-actions">
+              <span class="amb-sr-only">{{ 'common.actions' | t }}</span>
+            </th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-tag>
           <tr>
             <td>
-              <span class="p-datatable-column-title">Tag</span>
+              <span class="p-datatable-column-title">{{ 'tags.col.tag' | t }}</span>
               <amb-badge
                 [label]="tag.name"
                 [color]="tag.color"
@@ -81,25 +98,25 @@
             </td>
 
             <td class="tags-col-count">
-              <span class="p-datatable-column-title">Tasks</span>
+              <span class="p-datatable-column-title">{{ 'tags.col.tasks' | t }}</span>
               @if (tag.taskCount) {
                 <span class="tags-count amb-num">{{ tag.taskCount }}</span>
               } @else {
-                <span class="tags-count tags-count--zero">Unused</span>
+                <span class="tags-count tags-count--zero">{{ 'tags.unused' | t }}</span>
               }
             </td>
 
             <td class="tags-col-actions">
-              <span class="p-datatable-column-title">Actions</span>
+              <span class="p-datatable-column-title">{{ 'common.actions' | t }}</span>
               <div class="tags-actions">
                 <p-button
                   icon="pi pi-pen-to-square"
                   [rounded]="true"
                   [text]="true"
                   severity="secondary"
-                  pTooltip="Edit tag"
+                  [pTooltip]="'tags.edit' | t"
                   tooltipPosition="top"
-                  ariaLabel="Edit tag"
+                  [ariaLabel]="'tags.edit' | t"
                   [disabled]="isBusy(tag.id)"
                   (onClick)="openEdit(tag)"
                 ></p-button>
@@ -108,9 +125,9 @@
                   [rounded]="true"
                   [text]="true"
                   severity="danger"
-                  pTooltip="Delete tag"
+                  [pTooltip]="'tags.deleteAction' | t"
                   tooltipPosition="top"
-                  ariaLabel="Delete tag"
+                  [ariaLabel]="'tags.deleteAction' | t"
                   [disabled]="isBusy(tag.id)"
                   (onClick)="onDelete(tag)"
                 ></p-button>
@@ -123,21 +140,21 @@
   </amb-table>
 </amb-page>
 
-<amb-dialog [(visible)]="dialogVisible" [header]="dialogHeader" width="sm">
+<amb-dialog [(visible)]="dialogVisible" [header]="dialogHeader()" width="sm">
   <form class="tags-form" [formGroup]="form" (ngSubmit)="onSubmit()">
-    <amb-form-field label="Name" for="tag-name" required [error]="nameError()">
+    <amb-form-field [label]="'tags.name' | t" for="tag-name" required [error]="nameError()">
       <input
         id="tag-name"
         type="text"
         pInputText
         ambInput
         formControlName="name"
-        placeholder="Work, Personal, Urgent..."
+        [placeholder]="'tags.namePlaceholder' | t"
         autocomplete="off"
       />
     </amb-form-field>
 
-    <amb-form-field label="Colour" labelId="tag-color-label">
+    <amb-form-field [label]="'tags.colour' | t" labelId="tag-color-label">
       <!-- A fixed palette rather than a free picker: eight hues that stay
            distinguishable from each other keep a task's chips readable. -->
       <div class="tags-swatches" role="radiogroup" aria-labelledby="tag-color-label">
@@ -149,7 +166,7 @@
             [style.background]="choice"
             role="radio"
             [attr.aria-checked]="previewColor === choice"
-            [attr.aria-label]="'Colour ' + choice"
+            [attr.aria-label]="'tags.colourOption' | t: { value: choice }"
             (click)="pickColor(choice)"
           >
             @if (previewColor === choice) {
@@ -160,7 +177,7 @@
       </div>
     </amb-form-field>
 
-    <amb-form-field label="Preview" labelId="tag-preview-label">
+    <amb-form-field [label]="'tags.preview' | t" labelId="tag-preview-label">
       <div class="tags-preview" aria-labelledby="tag-preview-label">
         <amb-badge
           [label]="previewName"
@@ -174,14 +191,14 @@
 
   <ng-container ambDialogFooter>
     <p-button
-      label="Cancel"
+      [label]="'common.cancel' | t"
       severity="secondary"
       [text]="true"
       [disabled]="saving()"
       (onClick)="onCancel()"
     ></p-button>
     <p-button
-      [label]="editing() ? 'Save' : 'Create'"
+      [label]="(editing() ? 'common.save' : 'common.create') | t"
       icon="pi pi-check"
       [disabled]="form.invalid || saving()"
       [loading]="saving()"

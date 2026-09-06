@@ -31,6 +31,7 @@
 //   3. Light scheme
 //   4. Dark scheme
 //   5. Capability and preference fallbacks
+//   6. Khmer
 // =========================================================================
 
 @use 'ambient-accents' as accents;
@@ -118,8 +119,24 @@
 
   // -- Typography ----------------------------------------------------------
 
-  --amb-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  // The stack is assembled from three parts rather than written out once,
+  // because the Khmer interface needs the same list in a different order and
+  // duplicating a nine-entry font stack is how the two quietly drift apart.
+  // Generic families and the emoji faces have to come last in whatever order
+  // the parts are combined, which is why they are their own piece.
+  --amb-font-latin: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial;
+  --amb-font-khmer: 'Battambang', 'Noto Sans Khmer', 'Khmer OS';
+  --amb-font-fallback: sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+
+  // English. Khmer still sits in the stack, so the language picker's own
+  // endonym — ខ្មែរ, shown to a reader who is currently in English and looking
+  // for their way out — is drawn in Battambang rather than in whatever the OS
+  // happens to substitute. A browser only reaches that entry for a glyph Inter
+  // does not have, so no Latin text is affected and no Latin subset of
+  // Battambang is ever downloaded.
+  --amb-font-family: var(--amb-font-latin), var(--amb-font-khmer),
+    var(--amb-font-fallback);
 
   --amb-text-2xs: 0.6875rem; // 11px  chips
   --amb-text-xs: 0.75rem; //    12px  eyebrow labels, axis ticks
@@ -631,4 +648,58 @@
     --amb-mask: rgb(2 4 10 / 0.8);
     --amb-inverse-surface: #e8ecf6;
   }
+}
+
+// -- 6. Khmer ---------------------------------------------------------------
+//
+// Everything a change of script needs, written as token overrides so no
+// component has to know which language it is being rendered in. The attribute
+// is set on <html> by the bootstrap script in index.html before the first
+// paint, and afterwards by LocaleService.
+//
+// `[lang]` would have selected the same elements, and is deliberately not what
+// is used. That attribute is document semantics — it drives hyphenation,
+// spell-checking and which voice a screen reader speaks in — and overloading it
+// as a styling hook is how it ends up unable to change for its real purpose.
+
+:root[data-amb-locale='km'] {
+  // Battambang leads, so the interface is one typeface rather than two. It
+  // carries Latin as well, which is what keeps a heading like
+  // "7 ថ្ងៃខាងមុខ" from being set in two faces mid-phrase.
+  --amb-font-family: var(--amb-font-khmer), var(--amb-font-latin),
+    var(--amb-font-fallback);
+
+  // Khmer stacks subscripts and vowel signs above and below the baseline, so a
+  // line box sized for Latin clips the tall marks and lets two lines collide.
+  // Each step is roughly 0.15 looser than its Latin counterpart, which is what
+  // it takes to clear the marks without opening visible gaps in a paragraph.
+  --amb-leading-tight: 1.45;
+  --amb-leading-snug: 1.6;
+  --amb-leading-normal: 1.75;
+
+  // Khmer letters join into clusters; tracking pulls those clusters apart and
+  // pushes the marks off the letters they belong to. The negative tracking that
+  // keeps Inter's headings from looking loose is actively wrong here, so every
+  // step collapses to zero rather than being scaled down.
+  --amb-tracking-tight: 0;
+  --amb-tracking-snug: 0;
+  --amb-tracking-normal: 0;
+
+  // The two positive steps survive, halved. They exist for the uppercase
+  // eyebrow labels, and Khmer has no case — but those labels still sit at 11px
+  // where a little air helps, and the clusters tolerate this much.
+  --amb-tracking-wide: 0.02em;
+  --amb-tracking-wider: 0.04em;
+}
+
+// Figures that have to line up down a column stay in the Latin face.
+//
+// `.amb-num` is not a general "this is a number" class — it is applied exactly
+// where a value is read against the one above it: table cells, stat-card
+// figures, board counts. Battambang has no tabular figures, so under it
+// `font-variant-numeric: tabular-nums` silently does nothing and the columns
+// go ragged. This is the one place the two-typeface mix is worth it, because
+// the whole point of the class is the alignment.
+:root[data-amb-locale='km'] .amb-num {
+  font-family: var(--amb-font-latin), var(--amb-font-fallback);
 }

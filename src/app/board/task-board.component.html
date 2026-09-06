@@ -7,13 +7,17 @@
 ></p-confirmdialog>
 
 <amb-page width="wide">
-  <amb-page-header title="Board" [subtitle]="summary()">
-    <p-button label="New task" icon="pi pi-plus-circle" (onClick)="openCreate('TODO')"></p-button>
+  <amb-page-header [title]="'board.title' | t" [subtitle]="summary()">
+    <p-button
+      [label]="'tasks.new' | t"
+      icon="pi pi-plus-circle"
+      (onClick)="openCreate('TODO')"
+    ></p-button>
   </amb-page-header>
 
   @if (loading()) {
     <div class="board-columns">
-      @for (column of skeletonColumns; track column.status) {
+      @for (column of skeletonColumns(); track column.status) {
         <section class="board-column amb-surface-1">
           <header class="board-column__head">
             <span class="board-column__title">{{ column.label }}</span>
@@ -34,10 +38,15 @@
       <amb-empty-state
         tone="error"
         icon="pi pi-exclamation-triangle"
-        title="We couldn't load your board"
-        text="The TaskPulse API did not respond. Check that it is running, then try again."
+        [title]="'board.error.title' | t"
+        [text]="'common.error.apiDown' | t"
       >
-        <p-button label="Try again" icon="pi pi-refresh" [outlined]="true" (onClick)="reload()"></p-button>
+        <p-button
+          [label]="'common.tryAgain' | t"
+          icon="pi pi-refresh"
+          [outlined]="true"
+          (onClick)="reload()"
+        ></p-button>
       </amb-empty-state>
     </amb-card>
   } @else {
@@ -45,10 +54,14 @@
       <amb-card flush>
         <amb-empty-state
           icon="pi pi-th-large"
-          title="Your board is empty"
-          text="Add a task and it will appear in To do, ready to drag across as you work on it."
+          [title]="'board.empty.title' | t"
+          [text]="'board.empty.text' | t"
         >
-          <p-button label="Add task" icon="pi pi-plus-circle" (onClick)="openCreate('TODO')"></p-button>
+          <p-button
+            [label]="'tasks.add' | t"
+            icon="pi pi-plus-circle"
+            (onClick)="openCreate('TODO')"
+          ></p-button>
         </amb-empty-state>
       </amb-card>
     }
@@ -56,12 +69,18 @@
     <!-- The columns stay mounted even when empty, so there is somewhere to drop a card
          and so the workflow itself is visible before any task exists. -->
     <div class="board-columns" [class.board-columns--muted]="isEmpty()">
+      <!-- The API sends each column a rendered `label`, in English. The status
+           enum beside it is translated instead, the same way the task rows
+           ignore `statusLabel`. -->
       @for (column of columns(); track column.status) {
-        <section class="board-column amb-surface-1" [attr.aria-label]="column.label + ' column'">
+        <section
+          class="board-column amb-surface-1"
+          [attr.aria-label]="'board.column' | t: { label: columnLabel(column.status) }"
+        >
           <header class="board-column__head">
             <span class="board-column__title">
               <i [class]="columnIcon(column.status)" aria-hidden="true"></i>
-              {{ column.label }}
+              {{ columnLabel(column.status) }}
             </span>
             <span class="board-column__count amb-num">{{ column.total }}</span>
             <p-button
@@ -70,9 +89,9 @@
               [text]="true"
               size="small"
               severity="secondary"
-              [pTooltip]="'Add a task to ' + column.label"
+              [pTooltip]="'board.addTo' | t: { label: columnLabel(column.status) }"
               tooltipPosition="top"
-              [ariaLabel]="'Add a task to ' + column.label"
+              [ariaLabel]="'board.addTo' | t: { label: columnLabel(column.status) }"
               (onClick)="openCreate(column.status)"
             ></p-button>
           </header>
@@ -99,7 +118,7 @@
                 <div class="board-card__top">
                   <amb-badge
                     [severity]="prioritySeverityOf(task)"
-                    [label]="task.priorityLabel"
+                    [label]="priorityLabel(task)"
                     [icon]="priorityIconOf(task)"
                     rounded
                   />
@@ -110,9 +129,9 @@
                       [text]="true"
                       size="small"
                       severity="secondary"
-                      pTooltip="Edit task"
+                      [pTooltip]="'tasks.edit' | t"
                       tooltipPosition="top"
-                      ariaLabel="Edit task"
+                      [ariaLabel]="'tasks.edit' | t"
                       (onClick)="openEdit(task)"
                     ></p-button>
                     <p-button
@@ -121,9 +140,9 @@
                       [text]="true"
                       size="small"
                       severity="danger"
-                      pTooltip="Delete task"
+                      [pTooltip]="'tasks.deleteAction' | t"
                       tooltipPosition="top"
-                      ariaLabel="Delete task"
+                      [ariaLabel]="'tasks.deleteAction' | t"
                       (onClick)="onDelete(task)"
                     ></p-button>
                   </div>
@@ -156,12 +175,14 @@
                     tooltipPosition="top"
                   >
                     <i class="pi pi-calendar" aria-hidden="true"></i>
-                    <span class="amb-num">{{ asDate(task.dueDate) | date: 'MMM d' }}</span>
+                    <span class="amb-num">
+                      {{ asDate(task.dueDate) | date: 'MMM d' : undefined : dateLocale() }}
+                    </span>
                   </div>
                 }
               </article>
             } @empty {
-              <p class="board-column__empty">Drop a task here</p>
+              <p class="board-column__empty">{{ 'board.columnEmpty' | t }}</p>
             }
           </div>
         </section>

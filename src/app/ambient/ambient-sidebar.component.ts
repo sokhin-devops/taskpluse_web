@@ -20,6 +20,15 @@ export interface AmbientBrand {
   icon: string;
   /** Where the mark links to. Conventionally the default screen. */
   link: string;
+  /**
+   * Accessible name for the mark, which is a link and not decoration.
+   *
+   * <p>Supplied rather than composed from {@code name} because the composition
+   * is a sentence — "TaskPulse home" — and a sentence is the shell's business,
+   * not this component's. Building it here would hard-code English word order
+   * into the design system.</p>
+   */
+  homeLabel: string;
 }
 
 /**
@@ -89,7 +98,7 @@ export interface AmbientBrand {
         <a
           class="amb-brand"
           [routerLink]="brand().link"
-          [attr.aria-label]="brand().name + ' home'"
+          [attr.aria-label]="brand().homeLabel"
           [pTooltip]="brand().name"
           tooltipPosition="right"
           [tooltipDisabled]="!collapsed()"
@@ -466,6 +475,22 @@ export class AmbientSidebarComponent {
   readonly navLabel = input('Main');
 
   /**
+   * What the collapse toggle is called in each of its two states.
+   *
+   * <p>Inputs rather than constants because this layer holds no copy. Every
+   * other string the rail displays already arrives from the shell — the brand,
+   * the link labels — and these two were the only ones that did not, which made
+   * them the only part of the navigation that could not be translated.</p>
+   *
+   * <p>The English defaults are a convenience for a caller that has no
+   * translation layer, not a statement that English is the fallback: the shell
+   * always passes both.</p>
+   */
+  readonly expandLabel = input('Expand navigation');
+
+  readonly collapseLabel = input('Collapse navigation');
+
+  /**
    * Ties the toggle to what it expands, through {@code aria-controls}. Fixed
    * rather than generated: there is one docked rail per application, and a
    * generated id would differ between a server render and the browser's.
@@ -480,6 +505,6 @@ export class AmbientSidebarComponent {
 
   /** Says what the button will do, not what the state currently is. */
   protected readonly toggleLabel = computed(() =>
-    this.collapsed() ? 'Expand navigation' : 'Collapse navigation'
+    this.collapsed() ? this.expandLabel() : this.collapseLabel()
   );
 }

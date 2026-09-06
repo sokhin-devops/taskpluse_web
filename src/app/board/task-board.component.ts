@@ -32,19 +32,17 @@ import {
   Task,
   TaskStatus,
   priorityIcon,
+  priorityKey,
   prioritySeverity,
+  statusKey,
   toDate
 } from '../core/task.model';
 import { TaskService } from '../core/task.service';
+import { LocaleService } from '../i18n/locale.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { TaskFormComponent } from '../tasks/task-form.component';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary';
-
-const COLUMN_LABELS: Record<TaskStatus, string> = {
-  TODO: 'To do',
-  IN_PROGRESS: 'In progress',
-  DONE: 'Done'
-};
 
 /**
  * Kanban board: one column per workflow status, with cards dragged between them.
@@ -72,7 +70,8 @@ const COLUMN_LABELS: Record<TaskStatus, string> = {
     AmbientCardComponent,
     AmbientEmptyStateComponent,
     AmbientPageComponent,
-    AmbientPageHeaderComponent
+    AmbientPageHeaderComponent,
+    TranslatePipe
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './task-board.component.html',
@@ -84,6 +83,10 @@ export class TaskBoardComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(LocaleService);
+
+  /** Handed to the `date` pipe on each card's due-date chip. */
+  protected readonly dateLocale = this.i18n.dateLocale;
 
   readonly columns = signal<BoardColumn[]>([]);
   readonly loading = signal(true);
@@ -93,10 +96,13 @@ export class TaskBoardComponent implements OnInit {
   readonly columnIds = TASK_STATUSES.map((status) => `board-${status}`);
 
   readonly skeletonCards: number[] = [0, 1, 2];
-  readonly skeletonColumns = TASK_STATUSES.map((status) => ({
-    status,
-    label: COLUMN_LABELS[status]
-  }));
+
+  readonly skeletonColumns = computed(() =>
+    TASK_STATUSES.map((status) => ({
+      status,
+      label: this.i18n.t(statusKey(status))
+    }))
+  );
 
   readonly totalTasks = computed(() =>
     this.columns().reduce((sum, column) => sum + column.tasks.length, 0)
@@ -106,14 +112,14 @@ export class TaskBoardComponent implements OnInit {
 
   readonly summary = computed(() => {
     if (this.loading()) {
-      return 'Loading your board...';
+      return this.i18n.t('board.summary.loading');
     }
     const total = this.totalTasks();
     if (total === 0) {
-      return 'Nothing on the board yet.';
+      return this.i18n.t('board.summary.none');
     }
     const done = this.columns().find((column) => column.status === 'DONE')?.tasks.length ?? 0;
-    return `${total - done} open, ${done} done. Drag a card to move it.`;
+    return this.i18n.t('board.summary', { open: total - done, done });
   });
 
   // --- dialog state ------------------------------------------------------
@@ -150,8 +156,8 @@ export class TaskBoardComponent implements OnInit {
           this.loadFailed.set(true);
           this.messageService.add({
             severity: 'error',
-            summary: 'Could not load the board',
-            detail: toErrorMessage(error, 'The TaskPulse API did not respond. Please try again.'),
+            summary: this.i18n.t('board.error.toast'),
+            detail: toErrorMessage(error, this.i18n, 'common.error.apiDownRetry'),
             life: 5000
           });
         }
@@ -211,8 +217,10 @@ export class TaskBoardComponent implements OnInit {
           this.columns.set(snapshot);
           this.messageService.add({
             severity: 'error',
-            summary: 'Could not move the task',
-            detail: toErrorMessage(error, `"${task.title}" was put back where it was.`),
+            summary: this.i18n.t('board.error.move'),
+            detail: toErrorMessage(error, this.i18n, 'board.error.moveDetail', {
+              title: task.title
+            }),
             life: 5000
           });
         }
@@ -237,16 +245,25 @@ export class TaskBoardComponent implements OnInit {
 
   onDelete(task: Task): void {
     this.confirmationService.confirm({
-      header: 'Delete task',
-      message: `Delete "${task.title}"? This cannot be undone.`,
+      header: this.i18n.t('tasks.confirm.header'),
+      message: this.i18n.t('tasks.confirm.message', { title: task.title }),
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
+      acceptLabel: this.i18n.t('common.delete'),
+      rejectLabel: this.i18n.t('common.cancel'),
       accept: () => this.deleteTask(task)
     });
   }
 
   // --- presentation ------------------------------------------------------
+
+  /** The API's own column `label` is English-only; the status enum drives this. */
+  columnLabel(status: TaskStatus): string {
+    return this.i18n.t(statusKey(status));
+  }
+
+  priorityLabel(task: Task): string {
+    return this.i18n.t(priorityKey(task.priority));
+  }
 
   columnIcon(status: TaskStatus): string {
     switch (status) {
@@ -288,9 +305,9 @@ export class TaskBoardComponent implements OnInit {
 
   dueTooltip(task: Task): string {
     if (task.overdue) {
-      return 'Overdue';
+      return this.i18n.t('tasks.due.overdue');
     }
-    return this.isDueToday(task) ? 'Due today' : 'Due date';
+    return this.i18n.t(this.isDueToday(task) ? 'tasks.due.today' : 'board.due');
   }
 
   // --- internals ---------------------------------------------------------
@@ -341,7 +358,7 @@ export class TaskBoardComponent implements OnInit {
         next: () => {
           this.messageService.add({
             severity: 'success',
-            summary: 'Task deleted',
+            summary: this.i18n.t('tasks.toast.deleted'),
             detail: task.title,
             life: 3000
           });
@@ -350,8 +367,10 @@ export class TaskBoardComponent implements OnInit {
           this.columns.set(snapshot);
           this.messageService.add({
             severity: 'error',
-            summary: 'Delete failed',
-            detail: toErrorMessage(error, `"${task.title}" could not be deleted.`),
+            summary: this.i18n.t('tasks.toast.deleteFailed'),
+            detail: toErrorMessage(error, this.i18n, 'tasks.toast.deleteFailedDetail', {
+              title: task.title
+            }),
             life: 5000
           });
         }

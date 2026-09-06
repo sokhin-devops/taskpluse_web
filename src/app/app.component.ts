@@ -22,6 +22,9 @@ import {
 import { initialsOf } from './core/auth/auth.model';
 import { AuthService } from './core/auth/auth.service';
 import { TagService } from './core/tag.service';
+import { AmbientLanguageSwitcherComponent } from './i18n/language-switcher.component';
+import { LocaleService } from './i18n/locale.service';
+import { TranslatePipe } from './i18n/translate.pipe';
 
 /**
  * Application shell.
@@ -59,7 +62,9 @@ import { TagService } from './core/tag.service';
     AmbientButtonDirective,
     AmbientMenuComponent,
     AmbientSidebarComponent,
-    AmbientThemeSwitcherComponent
+    AmbientThemeSwitcherComponent,
+    AmbientLanguageSwitcherComponent,
+    TranslatePipe
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -68,28 +73,38 @@ export class AppComponent {
   private readonly auth = inject(AuthService);
   private readonly tagService = inject(TagService);
   private readonly router = inject(Router);
+  private readonly i18n = inject(LocaleService);
 
   /** The scrolling content area. Optional because the first navigation can finish
       before the view has been created. */
   private readonly scrollArea = viewChild<ElementRef<HTMLElement>>('scrollArea');
 
-  readonly brand: AmbientBrand = {
+  /**
+   * The product mark.
+   *
+   * <p>The name is not translated — it is a name, and a product that calls
+   * itself something else in Khmer is two products. Its accessible label is,
+   * because "TaskPulse home" is a sentence about the name rather than the name
+   * itself, and sentences have word order.</p>
+   */
+  readonly brand = computed<AmbientBrand>(() => ({
     name: 'TaskPulse',
     icon: 'pi pi-check-circle',
-    link: '/dashboard'
-  };
+    link: '/dashboard',
+    homeLabel: this.i18n.t('nav.home', { name: 'TaskPulse' })
+  }));
 
   readonly user = this.auth.user;
   readonly isAuthenticated = this.auth.isAuthenticated;
 
   readonly initials = computed(() => initialsOf(this.user()));
 
-  readonly navLinks: AmbientNavLink[] = [
-    { label: 'Dashboard', icon: 'pi pi-chart-bar', path: '/dashboard' },
-    { label: 'Tasks', icon: 'pi pi-list', path: '/tasks' },
-    { label: 'Board', icon: 'pi pi-th-large', path: '/board' },
-    { label: 'Tags', icon: 'pi pi-tags', path: '/tags' }
-  ];
+  readonly navLinks = computed<AmbientNavLink[]>(() => [
+    { label: this.i18n.t('nav.dashboard'), icon: 'pi pi-chart-bar', path: '/dashboard' },
+    { label: this.i18n.t('nav.tasks'), icon: 'pi pi-list', path: '/tasks' },
+    { label: this.i18n.t('nav.board'), icon: 'pi pi-th-large', path: '/board' },
+    { label: this.i18n.t('nav.tags'), icon: 'pi pi-tags', path: '/tags' }
+  ]);
 
   /** Whether the mobile navigation drawer is open. Closed on every navigation. */
   readonly navOpen = signal(false);
@@ -110,8 +125,10 @@ export class AppComponent {
   );
 
   /** Names both account triggers, neither of which has a visible label. */
-  readonly accountMenuLabel = computed(
-    () => `Account menu for ${this.user()?.displayName ?? 'your account'}`
+  readonly accountMenuLabel = computed(() =>
+    this.i18n.t('account.menu', {
+      name: this.user()?.displayName ?? this.i18n.t('account.yours')
+    })
   );
 
   /** Account menu. Recomputed so the header always shows the current account. */
@@ -119,7 +136,7 @@ export class AppComponent {
     const current = this.user();
     return [
       {
-        label: current ? current.displayName : 'Account',
+        label: current ? current.displayName : this.i18n.t('account.label'),
         items: [
           {
             label: current ? current.email : '',
@@ -128,7 +145,7 @@ export class AppComponent {
           },
           { separator: true },
           {
-            label: 'Sign out',
+            label: this.i18n.t('account.signOut'),
             icon: 'pi pi-sign-out',
             command: () => this.signOut()
           }

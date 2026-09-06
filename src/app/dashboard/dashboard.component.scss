@@ -224,13 +224,20 @@
    ------------------------------------------------------------------------- */
 
 .dash-tip {
-  position: absolute;
   top: var(--amb-space-1);
   z-index: var(--amb-z-raised);
   display: flex;
   flex-direction: column;
   gap: 0.1875rem;
+
+  /* Sized to its own content, so the box is only as wide as the longest of the
+     three lines. Without this the shrink-to-fit width is computed against the
+     space left beside `left`, which wraps "Completed 12" onto two lines near
+     the right-hand edge of the plot and makes the tooltip change shape as it
+     moves. `min-width` still keeps a one-digit day from looking pinched. */
+  width: max-content;
   min-width: 9rem;
+
   padding: var(--amb-space-2) var(--amb-space-3);
   transform: translateX(var(--amb-space-3));
   font-size: var(--amb-text-xs);
@@ -240,6 +247,17 @@
   /* The same surface as any other floating thing. It sits inside a card, so it
      is un-blurred: a blur here would sample the card, not the canvas. */
   @include amb.glass-nested(3, var(--amb-radius-sm), var(--amb-shadow-lg));
+
+  /* After the mixin, and it has to stay there.
+
+     `glass()` sets `position: relative` so its sheen layer has something to
+     resolve against, and a mixin included last wins over a declaration written
+     first. With `position` set before the include this was silently becoming
+     `relative`: the tooltip left the overlay layer, laid out in normal flow as
+     a block the full width of the card, and pushed the chart around as its
+     `left` offset changed from point to point. `absolute` is a positioning
+     context too, so the sheen is just as happy. */
+  position: absolute;
 }
 
 /* Past the middle of the plot the tooltip flips to the other side of the

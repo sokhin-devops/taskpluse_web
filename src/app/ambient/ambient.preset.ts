@@ -558,7 +558,19 @@ export const AmbientPreset = definePreset(Aura, {
       headerCell: {
         background: 'transparent',
         hoverBackground: 'var(--amb-surface-hover)',
-        selectedBackground: 'var(--amb-accent-soft)',
+
+        // The sorted column is marked by its label and arrow turning accent,
+        // not by a filled cell.
+        //
+        // PrimeNG paints `selectedBackground` across the whole `<th>` of the
+        // sorted column, and against these low-contrast headers an accent-soft
+        // fill read as a stuck hover or a selection artefact — a lit rectangle
+        // sitting over one heading for no reason the user did anything about.
+        // The arrow already says which column is sorted and which way; colour
+        // on the label reinforces it without inventing a second, louder signal.
+        selectedBackground: 'transparent',
+        selectedColor: 'var(--amb-accent-on-soft)',
+
         borderColor: 'var(--amb-border)',
         color: 'var(--amb-text-subtle)',
         hoverColor: 'var(--amb-text)',

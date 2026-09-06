@@ -9,8 +9,12 @@
 <amb-page>
   <!-- Heading and filters live outside the table so they stay put while the
        table swaps between its loading, empty and populated states. -->
-  <amb-page-header title="Tasks" [subtitle]="summary()">
-    <p-button label="New task" icon="pi pi-plus-circle" (onClick)="openCreate()"></p-button>
+  <amb-page-header [title]="'tasks.title' | t" [subtitle]="summary()">
+    <p-button
+      [label]="'tasks.new' | t"
+      icon="pi pi-plus-circle"
+      (onClick)="openCreate()"
+    ></p-button>
   </amb-page-header>
 
   <amb-toolbar styleClass="tasks-filters">
@@ -21,15 +25,15 @@
           pInputText
           ambInput
           type="search"
-          placeholder="Search title and description"
-          aria-label="Search tasks by title or description"
+          [placeholder]="'tasks.search.placeholder' | t"
+          [attr.aria-label]="'tasks.search.label' | t"
           [value]="search()"
           (input)="onSearchInput($event)"
         />
       </p-iconfield>
 
       <p-selectbutton
-        [options]="scopeOptions"
+        [options]="scopeOptions()"
         [ngModel]="scope()"
         (ngModelChange)="onScopeChange($event)"
         [ngModelOptions]="{ standalone: true }"
@@ -37,37 +41,37 @@
         optionValue="value"
         [allowEmpty]="false"
         styleClass="tasks-filters__scope"
-        aria-label="Quick filter"
+        [ariaLabel]="'tasks.scope.label' | t"
       ></p-selectbutton>
     </ng-container>
 
     <ng-container ambToolbarEnd>
       <p-multiselect
-        [options]="statusOptions"
+        [options]="statusOptions()"
         [ngModel]="selectedStatuses()"
         (ngModelChange)="onStatusChange($event)"
         [ngModelOptions]="{ standalone: true }"
         optionLabel="label"
         optionValue="value"
-        placeholder="Status"
+        [placeholder]="'tasks.filter.status' | t"
         appendTo="body"
         [showToggleAll]="false"
         styleClass="tasks-filters__select"
-        ariaLabel="Filter by status"
+        [ariaLabel]="'tasks.filter.statusLabel' | t"
       ></p-multiselect>
 
       <p-multiselect
-        [options]="priorityOptions"
+        [options]="priorityOptions()"
         [ngModel]="selectedPriorities()"
         (ngModelChange)="onPriorityChange($event)"
         [ngModelOptions]="{ standalone: true }"
         optionLabel="label"
         optionValue="value"
-        placeholder="Priority"
+        [placeholder]="'tasks.filter.priority' | t"
         appendTo="body"
         [showToggleAll]="false"
         styleClass="tasks-filters__select"
-        ariaLabel="Filter by priority"
+        [ariaLabel]="'tasks.filter.priorityLabel' | t"
       ></p-multiselect>
 
       @if (tags().length > 0) {
@@ -78,11 +82,11 @@
           [ngModelOptions]="{ standalone: true }"
           optionLabel="name"
           optionValue="id"
-          placeholder="Tags"
+          [placeholder]="'tasks.filter.tags' | t"
           appendTo="body"
           [showToggleAll]="false"
           styleClass="tasks-filters__select"
-          ariaLabel="Filter by tag"
+          [ariaLabel]="'tasks.filter.tagsLabel' | t"
         >
           <ng-template #item let-tag>
             <span class="tasks-choice">
@@ -95,7 +99,7 @@
 
       @if (hasFilters()) {
         <p-button
-          [label]="'Clear (' + activeFilterCount() + ')'"
+          [label]="'tasks.filter.clear' | t: { count: activeFilterCount() }"
           icon="pi pi-filter-slash"
           severity="secondary"
           [text]="true"
@@ -107,14 +111,16 @@
 
   <amb-table>
     @if (loading()) {
-      <p-table [value]="skeletonRows" styleClass="tasks-table" responsiveLayout="stack" breakpoint="768px">
+      <p-table [value]="skeletonRows" styleClass="tasks-table" responsiveLayout="stack" breakpoint="900px">
         <ng-template pTemplate="header">
           <tr>
-            <th scope="col" class="tasks-col-task">Task</th>
-            <th scope="col" class="tasks-col-priority">Priority</th>
-            <th scope="col" class="tasks-col-due">Due date</th>
-            <th scope="col" class="tasks-col-status">Status</th>
-            <th scope="col" class="tasks-col-actions"><span class="amb-sr-only">Actions</span></th>
+            <th scope="col" class="tasks-col-task">{{ 'tasks.col.task' | t }}</th>
+            <th scope="col" class="tasks-col-priority">{{ 'tasks.col.priority' | t }}</th>
+            <th scope="col" class="tasks-col-due">{{ 'tasks.col.due' | t }}</th>
+            <th scope="col" class="tasks-col-status">{{ 'tasks.col.status' | t }}</th>
+            <th scope="col" class="tasks-col-actions">
+              <span class="amb-sr-only">{{ 'common.actions' | t }}</span>
+            </th>
           </tr>
         </ng-template>
 
@@ -141,19 +147,24 @@
       <amb-empty-state
         tone="error"
         icon="pi pi-exclamation-triangle"
-        title="We couldn't load your tasks"
-        text="The TaskPulse API did not respond. Check that it is running, then try again."
+        [title]="'tasks.error.title' | t"
+        [text]="'common.error.apiDown' | t"
       >
-        <p-button label="Try again" icon="pi pi-refresh" [outlined]="true" (onClick)="reload()"></p-button>
+        <p-button
+          [label]="'common.tryAgain' | t"
+          icon="pi pi-refresh"
+          [outlined]="true"
+          (onClick)="reload()"
+        ></p-button>
       </amb-empty-state>
     } @else if (totalRecords() === 0 && hasFilters()) {
       <amb-empty-state
         icon="pi pi-filter-slash"
-        title="No tasks match these filters"
-        text="Try widening the search, or clear the filters to see everything."
+        [title]="'tasks.empty.filtered.title' | t"
+        [text]="'tasks.empty.filtered.text' | t"
       >
         <p-button
-          label="Clear filters"
+          [label]="'tasks.filter.clearPlain' | t"
           icon="pi pi-filter-slash"
           [outlined]="true"
           (onClick)="clearFilters()"
@@ -162,17 +173,29 @@
     } @else if (totalRecords() === 0) {
       <amb-empty-state
         icon="pi pi-check-circle"
-        title="No tasks yet"
-        text="Add your first task and TaskPulse will keep its due date in view."
+        [title]="'tasks.empty.title' | t"
+        [text]="'tasks.empty.text' | t"
       >
-        <p-button label="Add task" icon="pi pi-plus-circle" (onClick)="openCreate()"></p-button>
+        <p-button
+          [label]="'tasks.add' | t"
+          icon="pi pi-plus-circle"
+          (onClick)="openCreate()"
+        ></p-button>
       </amb-empty-state>
     }
 
     <!-- The table stays mounted in every state, merely hidden, because (onLazyLoad)
          is what performs the initial fetch: unmounting it during the loading and
          empty states would mean nothing ever asks for the first page. It also keeps
-         a background refresh from blanking the list the user is looking at. -->
+         a background refresh from blanking the list the user is looking at.
+
+         The stack breakpoint is 900px rather than PrimeNG's default 768: five
+         columns still *fit* at 800px, but only by squeezing the title to around
+         200px and wrapping it over three lines while three badges sit in
+         visibly empty cells beside it. The stacked card reads better well
+         before the table stops fitting. 900px is `$amb-bp-lg`, which is also
+         where the shell swaps its rail for the drawer, so the whole screen
+         changes shape at one width rather than two. -->
     <p-table
       [value]="tasks()"
       [class.tasks-hidden]="loading() || loadFailed() || totalRecords() === 0"
@@ -185,41 +208,43 @@
       [paginator]="true"
       [rowsPerPageOptions]="[10, 20, 50]"
       [showCurrentPageReport]="true"
-      currentPageReportTemplate="{first}-{last} of {totalRecords}"
+      [currentPageReportTemplate]="'primeng.pageReport' | t"
       [rowHover]="true"
       sortMode="single"
       sortField="dueDate"
       [sortOrder]="1"
       responsiveLayout="stack"
-      breakpoint="768px"
+      breakpoint="900px"
       styleClass="tasks-table"
     >
       <ng-template pTemplate="header">
         <tr>
           <th scope="col" class="tasks-col-task" pSortableColumn="title">
-            Task
+            {{ 'tasks.col.task' | t }}
             <p-sortIcon field="title"></p-sortIcon>
           </th>
           <th scope="col" class="tasks-col-priority" pSortableColumn="priority">
-            Priority
+            {{ 'tasks.col.priority' | t }}
             <p-sortIcon field="priority"></p-sortIcon>
           </th>
           <th scope="col" class="tasks-col-due" pSortableColumn="dueDate">
-            Due date
+            {{ 'tasks.col.due' | t }}
             <p-sortIcon field="dueDate"></p-sortIcon>
           </th>
           <th scope="col" class="tasks-col-status" pSortableColumn="status">
-            Status
+            {{ 'tasks.col.status' | t }}
             <p-sortIcon field="status"></p-sortIcon>
           </th>
-          <th scope="col" class="tasks-col-actions"><span class="amb-sr-only">Actions</span></th>
+          <th scope="col" class="tasks-col-actions">
+            <span class="amb-sr-only">{{ 'common.actions' | t }}</span>
+          </th>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="body" let-task>
         <tr [class.tasks-row--done]="task.completed">
           <td>
-            <span class="p-datatable-column-title">Task</span>
+            <span class="p-datatable-column-title">{{ 'tasks.col.task' | t }}</span>
             <div class="tasks-task">
               <span class="tasks-task__title">{{ task.title }}</span>
               @if (task.description) {
@@ -241,17 +266,21 @@
           </td>
 
           <td>
-            <span class="p-datatable-column-title">Priority</span>
+            <span class="p-datatable-column-title">{{ 'tasks.col.priority' | t }}</span>
+            <!-- The API sends `priorityLabel` already rendered, in English. The
+                 enum beside it is translated instead: a server that does not
+                 know what language this browser is in cannot be the one to
+                 decide. Same for `statusLabel` below. -->
             <amb-badge
               [severity]="prioritySeverityOf(task)"
-              [label]="task.priorityLabel"
+              [label]="priorityLabel(task)"
               [icon]="priorityIconOf(task)"
               rounded
             />
           </td>
 
           <td>
-            <span class="p-datatable-column-title">Due date</span>
+            <span class="p-datatable-column-title">{{ 'tasks.col.due' | t }}</span>
             @if (task.dueDate) {
               @if (dueSeverity(task); as severity) {
                 <amb-badge
@@ -261,25 +290,27 @@
                   rounded
                 />
               } @else {
-                <span class="tasks-due amb-num">{{ asDate(task.dueDate) | date: 'MMM d, y' }}</span>
+                <span class="tasks-due amb-num">
+                  {{ asDate(task.dueDate) | date: 'MMM d, y' : undefined : dateLocale() }}
+                </span>
               }
             } @else {
-              <span class="tasks-blank" aria-label="No due date">&mdash;</span>
+              <span class="tasks-blank" [attr.aria-label]="'tasks.due.none' | t">&mdash;</span>
             }
           </td>
 
           <td>
-            <span class="p-datatable-column-title">Status</span>
+            <span class="p-datatable-column-title">{{ 'tasks.col.status' | t }}</span>
             <amb-badge
               [severity]="statusSeverityOf(task)"
-              [label]="task.statusLabel"
+              [label]="statusLabel(task)"
               [icon]="statusIconOf(task)"
               rounded
             />
           </td>
 
           <td class="tasks-col-actions">
-            <span class="p-datatable-column-title">Actions</span>
+            <span class="p-datatable-column-title">{{ 'common.actions' | t }}</span>
             <div class="tasks-actions">
               <p-button
                 icon="pi pi-check"
@@ -297,9 +328,9 @@
                 [rounded]="true"
                 [text]="true"
                 severity="secondary"
-                pTooltip="Edit task"
+                [pTooltip]="'tasks.edit' | t"
                 tooltipPosition="top"
-                ariaLabel="Edit task"
+                [ariaLabel]="'tasks.edit' | t"
                 [disabled]="isBusy(task.id)"
                 (onClick)="openEdit(task)"
               ></p-button>
@@ -308,9 +339,9 @@
                 [rounded]="true"
                 [text]="true"
                 severity="danger"
-                pTooltip="Delete task"
+                [pTooltip]="'tasks.deleteAction' | t"
                 tooltipPosition="top"
-                ariaLabel="Delete task"
+                [ariaLabel]="'tasks.deleteAction' | t"
                 [disabled]="isBusy(task.id)"
                 (onClick)="onDelete(task)"
               ></p-button>

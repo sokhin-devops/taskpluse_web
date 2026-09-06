@@ -22,8 +22,10 @@ import {
 } from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
 import { readableTextOn } from '../core/tag.model';
-import { TaskStats, toDate } from '../core/task.model';
+import { TaskStats, priorityKey, toDate } from '../core/task.model';
 import { TaskService } from '../core/task.service';
+import { LocaleService } from '../i18n/locale.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 
 /** One tile in the KPI row. */
 interface Tile {
@@ -137,7 +139,8 @@ const MAX_X_LABELS = 7;
     AmbientEmptyStateComponent,
     AmbientPageComponent,
     AmbientPageHeaderComponent,
-    AmbientStatCardComponent
+    AmbientStatCardComponent,
+    TranslatePipe
   ],
   providers: [MessageService],
   templateUrl: './dashboard.component.html',
@@ -147,6 +150,17 @@ export class DashboardComponent implements OnInit {
   private readonly taskService = inject(TaskService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(LocaleService);
+
+  /**
+   * Handed to every `date` and `number` binding on this screen.
+   *
+   * <p>Those pipes take a locale as their last argument, which is the only way
+   * to change their output at runtime — `LOCALE_ID` is fixed at bootstrap. The
+   * axis ticks and the tooltip date go through {@link shortDate} instead, which
+   * reads the same value.</p>
+   */
+  protected readonly dateLocale = this.i18n.dateLocale;
 
   readonly stats = signal<TaskStats | null>(null);
   readonly loading = signal(true);
@@ -165,11 +179,12 @@ export class DashboardComponent implements OnInit {
   readonly plotWidth = PLOT_WIDTH;
   readonly plotHeight = PLOT_HEIGHT;
 
-  readonly rangeOptions = [
-    { label: '7 days', value: 7 },
-    { label: '14 days', value: 14 },
-    { label: '30 days', value: 30 }
-  ];
+  readonly rangeOptions = computed(() =>
+    [7, 14, 30].map((days) => ({
+      label: this.i18n.t('dashboard.trend.days', { days }),
+      value: days
+    }))
+  );
 
   readonly skeletonTiles = [0, 1, 2, 3, 4];
 
@@ -180,10 +195,22 @@ export class DashboardComponent implements OnInit {
   readonly completionCaption = computed(() => {
     const stats = this.stats();
     if (!stats || stats.total === 0) {
-      return 'No tasks yet';
+      return this.i18n.t('dashboard.noTasks');
     }
-    return `${stats.completed} of ${stats.total} tasks done`;
+    return this.i18n.t('dashboard.completionCaption', {
+      completed: stats.completed,
+      total: stats.total
+    });
   });
+
+  /** The trend card's subtitle: two totals and the window they cover. */
+  readonly trendSubtitle = computed(() =>
+    this.i18n.t('dashboard.trend.subtitle', {
+      created: this.chart().totalCreated,
+      completed: this.chart().totalCompleted,
+      days: this.days()
+    })
+  );
 
   readonly tiles = computed<Tile[]>(() => {
     const stats = this.stats();
@@ -195,21 +222,21 @@ export class DashboardComponent implements OnInit {
     // union does not match Tile[].
     const tiles: Tile[] = [
       {
-        label: 'Open',
+        label: this.i18n.t('dashboard.tile.open'),
         value: stats.open,
         icon: 'pi pi-inbox',
         link: '/tasks',
         query: { scope: 'open' }
       },
       {
-        label: 'In progress',
+        label: this.i18n.t('dashboard.tile.inProgress'),
         value: stats.inProgress,
         icon: 'pi pi-sync',
         link: '/board',
         query: {}
       },
       {
-        label: 'Overdue',
+        label: this.i18n.t('dashboard.tile.overdue'),
         value: stats.overdue,
         icon: 'pi pi-exclamation-triangle',
         link: '/tasks',
@@ -218,14 +245,14 @@ export class DashboardComponent implements OnInit {
         emphasis: stats.overdue > 0 ? 'attention' : undefined
       },
       {
-        label: 'Due today',
+        label: this.i18n.t('dashboard.tile.dueToday'),
         value: stats.dueToday,
         icon: 'pi pi-calendar',
         link: '/tasks',
         query: { scope: 'open' }
       },
       {
-        label: 'Next 7 days',
+        label: this.i18n.t('dashboard.tile.next7'),
         value: stats.dueNext7Days,
         icon: 'pi pi-calendar-clock',
         link: '/tasks',
@@ -286,7 +313,7 @@ export class DashboardComponent implements OnInit {
     const every = Math.max(1, Math.ceil(trend.length / MAX_X_LABELS));
     const xLabels = points
       .filter((_, index) => index % every === 0 || index === points.length - 1)
-      .map((point) => ({ x: point.x, label: shortDate(point.date) }));
+      .map((point) => ({ x: point.x, label: shortDate(point.date, this.dateLocale()) }));
 
     return {
       points,
@@ -323,11 +350,19 @@ export class DashboardComponent implements OnInit {
 
   // --- breakdowns --------------------------------------------------------
 
+  /**
+   * The priority breakdown.
+   *
+   * <p>The API sends a rendered `label` alongside each count. It is ignored in
+   * favour of translating the `priority` enum beside it, because the server has
+   * no idea what language this browser is in — the same reason the task list
+   * ignores `statusLabel`.</p>
+   */
   readonly priorityRows = computed<BarRow[]>(() => {
     const counts = this.stats()?.openByPriority ?? [];
     const peak = counts.reduce((highest, row) => Math.max(highest, row.count), 0);
     return counts.map((row) => ({
-      label: row.label,
+      label: this.i18n.t(priorityKey(row.priority)),
       value: row.count,
       percent: peak > 0 ? (row.count / peak) * 100 : 0
     }));
@@ -369,8 +404,8 @@ export class DashboardComponent implements OnInit {
           this.loadFailed.set(true);
           this.messageService.add({
             severity: 'error',
-            summary: 'Could not load the dashboard',
-            detail: toErrorMessage(error, 'The TaskPulse API did not respond. Please try again.'),
+            summary: this.i18n.t('dashboard.error.toast'),
+            detail: toErrorMessage(error, this.i18n, 'common.error.apiDownRetry'),
             life: 5000
           });
         }
@@ -465,13 +500,19 @@ function formatTick(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(0);
 }
 
-/** 'yyyy-MM-dd' to a short axis label, e.g. "4 Sep". */
-function shortDate(iso: string): string {
+/**
+ * 'yyyy-MM-dd' to a short axis label, e.g. "4 Sep".
+ *
+ * <p>Takes the locale rather than reading it, so the whole function stays pure
+ * and the caller — a `computed` that already depends on the locale signal — is
+ * the single place the dependency is declared.</p>
+ */
+function shortDate(iso: string, locale: string): string {
   const date = toDate(iso);
   if (!date) {
     return iso;
   }
-  return `${date.getDate()} ${date.toLocaleString('en', { month: 'short' })}`;
+  return `${date.getDate()} ${date.toLocaleString(locale, { month: 'short' })}`;
 }
 
 function round(value: number): number {
