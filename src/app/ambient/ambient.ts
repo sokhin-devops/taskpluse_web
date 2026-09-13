@@ -43,6 +43,8 @@
  * imports: [AmbientPageComponent, AmbientCardComponent, AmbientEmptyStateComponent]
  */
 
+import { AmbientActionTileComponent } from './ambient-action-tile.component';
+import { AmbientAppearanceControlsComponent } from './ambient-appearance-controls.component';
 import { AmbientAvatarComponent } from './ambient-avatar.component';
 import { AmbientBackgroundComponent } from './ambient-background.component';
 import { AmbientBadgeComponent } from './ambient-badge.component';
@@ -54,7 +56,7 @@ import { AmbientEmptyStateComponent } from './ambient-empty-state.component';
 import { AmbientFormFieldComponent } from './ambient-form-field.component';
 import { AmbientInputDirective } from './ambient-input.directive';
 import { AmbientMenuComponent } from './ambient-menu.component';
-import { AmbientPageComponent, AmbientPageHeaderComponent } from './ambient-page.component';
+import { AmbientPageComponent } from './ambient-page.component';
 import { AmbientPanelComponent } from './ambient-panel.component';
 import { AmbientSelectDirective } from './ambient-select.directive';
 import { AmbientSidebarComponent } from './ambient-sidebar.component';
@@ -63,7 +65,9 @@ import { AmbientTableComponent } from './ambient-table.component';
 import { AmbientTabsComponent } from './ambient-tabs.component';
 import { AmbientThemeSwitcherComponent } from './ambient-theme-switcher.component';
 import { AmbientToolbarComponent } from './ambient-toolbar.component';
+import { AmbientTopbarComponent } from './ambient-topbar.component';
 
+export { AmbientActionTileComponent } from './ambient-action-tile.component';
 export { AmbientAvatarComponent } from './ambient-avatar.component';
 export { AmbientBackgroundComponent } from './ambient-background.component';
 export { AmbientBadgeComponent } from './ambient-badge.component';
@@ -77,7 +81,7 @@ export { AmbientEmptyStateComponent } from './ambient-empty-state.component';
 export { AmbientFormFieldComponent } from './ambient-form-field.component';
 export { AmbientInputDirective } from './ambient-input.directive';
 export { AmbientMenuComponent } from './ambient-menu.component';
-export { AmbientPageComponent, AmbientPageHeaderComponent } from './ambient-page.component';
+export { AmbientPageComponent } from './ambient-page.component';
 export { AmbientPanelComponent } from './ambient-panel.component';
 export {
   AMBIENT_PREFERENCE_KEYS,
@@ -94,16 +98,26 @@ export { AmbientTableComponent } from './ambient-table.component';
 export { AmbientTabsComponent } from './ambient-tabs.component';
 export type { AmbientTab } from './ambient-tabs.component';
 export { AmbientThemeSwitcherComponent } from './ambient-theme-switcher.component';
+export { AmbientAppearanceControlsComponent } from './ambient-appearance-controls.component';
+export { AmbientAppearancePanelComponent } from './ambient-appearance-panel.component';
+export { buildAccentRamp, contrastRatio, normaliseHex } from './ambient-accent-ramp';
+export type { AmbientAccentRamp } from './ambient-accent-ramp';
 export {
   AMBIENT_ACCENTS,
+  AMBIENT_VIBES,
+  DEFAULT_CUSTOM_ACCENT,
+  DEFAULT_VIBE,
   AmbientThemeService
 } from './ambient-theme.service';
 export type {
   AmbientAccent,
+  AmbientAccentChoice,
   AmbientResolvedScheme,
-  AmbientScheme
+  AmbientScheme,
+  AmbientVibe
 } from './ambient-theme.service';
 export { AmbientToolbarComponent } from './ambient-toolbar.component';
+export { AmbientTopbarComponent } from './ambient-topbar.component';
 
 /**
  * Every piece of the layer, for a component that genuinely uses most of it.
@@ -114,6 +128,8 @@ export { AmbientToolbarComponent } from './ambient-toolbar.component';
  */
 export const AMBIENT_UI = [
   AmbientActionsDirective,
+  AmbientActionTileComponent,
+  AmbientAppearanceControlsComponent,
   AmbientAvatarComponent,
   AmbientBackgroundComponent,
   AmbientBadgeComponent,
@@ -126,7 +142,6 @@ export const AMBIENT_UI = [
   AmbientInputDirective,
   AmbientMenuComponent,
   AmbientPageComponent,
-  AmbientPageHeaderComponent,
   AmbientPanelComponent,
   AmbientSelectDirective,
   AmbientSidebarComponent,
@@ -134,5 +149,6 @@ export const AMBIENT_UI = [
   AmbientTableComponent,
   AmbientTabsComponent,
   AmbientThemeSwitcherComponent,
-  AmbientToolbarComponent
+  AmbientToolbarComponent,
+  AmbientTopbarComponent
 ] as const;

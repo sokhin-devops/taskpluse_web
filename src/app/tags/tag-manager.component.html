@@ -6,14 +6,17 @@
   rejectButtonStyleClass="p-button-text p-button-secondary"
 ></p-confirmdialog>
 
-<amb-page width="narrow">
-  <amb-page-header [title]="'tags.title' | t" [subtitle]="summary()">
+<!-- The shared reading column. This screen used to be `narrow`, which is a
+     sensible width for a three-column table and the wrong one now that the
+     topbar above it has visible edges at the full width. -->
+<amb-page>
+  <div class="amb-page-actions amb-page-actions--end">
     <p-button
       [label]="'tags.new' | t"
       icon="pi pi-plus-circle"
       (onClick)="openCreate()"
     ></p-button>
-  </amb-page-header>
+  </div>
 
   <amb-table>
     @if (loading()) {

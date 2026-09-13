@@ -74,6 +74,38 @@
   min-width: 9.5rem;
 }
 
+/* -- Filter panel ---------------------------------------------------------
+   The three attribute pickers, behind the toolbar's Filters button. They were
+   three unlabelled placeholders in the toolbar itself; in here each has a real
+   label above it and they stack, which is also what makes room for a fourth
+   without the toolbar wrapping onto a second line.
+
+   The popover is appended to `<body>`, so it is reached through `::ng-deep`.
+   ------------------------------------------------------------------------- */
+
+:host ::ng-deep .tasks-filter-panel .p-popover-content {
+  padding: var(--amb-pad-card);
+}
+
+:host ::ng-deep .tasks-filter-panel .tasks-filter-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--amb-space-4);
+  width: 16rem;
+  max-width: 100%;
+}
+
+/* Full width in here, overriding the toolbar's own sizing: in a stacked panel
+   a control that is 9.5rem wide next to one that is 16rem looks unfinished. */
+:host ::ng-deep .tasks-filter-panel .tasks-filters__select {
+  width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep .tasks-filter-panel .tasks-filters__select .p-multiselect-label {
+  max-width: none;
+}
+
 /* The multiselect label is capped so three selected tags cannot stretch the
    control across the row and push the others onto a new line. */
 :host ::ng-deep .tasks-filters__select .p-multiselect-label {
@@ -89,12 +121,10 @@
   min-width: 0;
 }
 
+/* Size only; the shape and the ring come from the shared `.amb-swatch`. */
 .tasks-swatch {
-  flex: 0 0 auto;
   width: 0.625rem;
   height: 0.625rem;
-  border-radius: var(--amb-radius-pill);
-  box-shadow: inset 0 0 0 1px var(--amb-swatch-ring);
 }
 
 /* -- 2. Table columns -----------------------------------------------------

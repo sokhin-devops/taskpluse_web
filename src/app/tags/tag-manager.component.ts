@@ -18,7 +18,6 @@ import {
   AmbientFormFieldComponent,
   AmbientInputDirective,
   AmbientPageComponent,
-  AmbientPageHeaderComponent,
   AmbientTableComponent
 } from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
@@ -51,7 +50,6 @@ import { TranslatePipe } from '../i18n/translate.pipe';
     AmbientFormFieldComponent,
     AmbientInputDirective,
     AmbientPageComponent,
-    AmbientPageHeaderComponent,
     AmbientTableComponent,
     TranslatePipe
   ],
@@ -82,19 +80,6 @@ export class TagManagerComponent implements OnInit {
    */
   private readonly maxNameLength = 40;
 
-  readonly summary = computed(() => {
-    if (this.loading()) {
-      return this.i18n.t('tags.summary.loading');
-    }
-    const count = this.tags().length;
-    if (count === 0) {
-      return this.i18n.t('tags.summary.none');
-    }
-    // Two keys rather than one sentence with a noun swapped in: the number
-    // agrees with more of the sentence than the noun in most languages, and
-    // Khmer has no plural at all and reuses the same string.
-    return this.i18n.t(count === 1 ? 'tags.summary.one' : 'tags.summary.other', { count });
-  });
 
   /** Null while creating, the tag being edited otherwise. */
   readonly editing = signal<Tag | null>(null);

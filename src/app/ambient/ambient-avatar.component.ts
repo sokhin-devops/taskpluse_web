@@ -43,11 +43,23 @@ import { AvatarModule } from 'primeng/avatar';
       // letters sit high in their box, so the default centring reads low.
       line-height: 1;
     }
+
+    // A step below PrimeNG's smallest. It has three sizes and the smallest is
+    // 2rem, which is right for an avatar that is the subject of its row and too
+    // big for one that is only identifying the row — the account button at the
+    // foot of the rail, where the name beside it is what is actually being read.
+    :host(.amb-avatar--small) ::ng-deep .amb-avatar {
+      width: 1.75rem;
+      height: 1.75rem;
+      font-size: var(--amb-text-2xs);
+      letter-spacing: var(--amb-tracking-normal);
+    }
   `,
   host: {
     '[attr.role]': 'name() ? "img" : null',
     '[attr.aria-label]': 'name()',
-    '[attr.aria-hidden]': 'name() ? null : "true"'
+    '[attr.aria-hidden]': 'name() ? null : "true"',
+    '[class.amb-avatar--small]': 'size() === "small"'
   }
 })
 export class AmbientAvatarComponent {
@@ -63,13 +75,17 @@ export class AmbientAvatarComponent {
    */
   readonly name = input<string>();
 
-  readonly size = input<'normal' | 'large' | 'xlarge'>('normal');
+  readonly size = input<'small' | 'normal' | 'large' | 'xlarge'>('normal');
 
   readonly shape = input<'square' | 'circle'>('circle');
 
-  /** PrimeNG uses `undefined` rather than `'normal'` for the default size. */
+  /**
+   * PrimeNG uses `undefined` rather than `'normal'` for the default size, and
+   * has no `small` at all — that one is PrimeNG's default scaled down by the
+   * stylesheet above, so it is also `undefined` here.
+   */
   protected readonly primeSize = computed(() => {
     const size = this.size();
-    return size === 'normal' ? undefined : size;
+    return size === 'normal' || size === 'small' ? undefined : size;
   });
 }

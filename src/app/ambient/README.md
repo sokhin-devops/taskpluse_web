@@ -18,6 +18,7 @@ and its upgrade path; the product gets one coherent surface.
 |---|---|
 | `src/styles/ambient/_ambient-tokens.scss` | every colour, radius, shadow, blur, space, type step and duration — light scheme on `:root`, dark on `:root.amb-dark` |
 | `src/styles/ambient/_ambient-accents.scss` | the six accent palettes, and which step each nominates per scheme |
+| `src/styles/ambient/_ambient-vibes.scss` | the five vibes, each a block of token overrides |
 | `src/styles/ambient/_ambient-breakpoints.scss` | the Sass breakpoints (`@media` cannot read a custom property) |
 | `src/styles/ambient/_ambient-mixins.scss` | `glass()`, `focus-ring()`, `hover-lift()`, `respond-below()` … |
 | `src/styles/ambient/_ambient-base.scss` | reset, document, type scale, keyframes, **the CSS layer contract** |
@@ -26,7 +27,8 @@ and its upgrade path; the product gets one coherent surface.
 | `src/styles/ambient/_ambient-layout.scss` | the shell, the page column, the grids |
 | `src/styles/ambient/_ambient-components.scss` | the PrimeNG layer — only what a token cannot express |
 | `src/app/ambient/ambient.preset.ts` | points PrimeNG's own tokens at the `--amb-*` properties |
-| `src/app/ambient/ambient-theme.service.ts` | owns the colour scheme and the accent |
+| `src/app/ambient/ambient-theme.service.ts` | owns the scheme, the accent and the vibe |
+| `src/app/ambient/ambient-accent-ramp.ts` | builds a whole palette from one colour, in OKLCH |
 | `src/app/ambient/*.component.ts` | the reusable components |
 
 ## Making a change
@@ -36,6 +38,7 @@ and its upgrade path; the product gets one coherent surface.
 | a colour, radius, shadow, spacing, duration | `_ambient-tokens.scss` — nothing else |
 | how strong the glass looks | `--amb-blur-*`, `--amb-glass-opacity-*`, `--amb-glass-inset`, `--amb-glass-sheen` |
 | add or retune an accent palette | `_ambient-accents.scss`, then `AMBIENT_ACCENTS` in the service |
+| add or retune a vibe | `_ambient-vibes.scss`, then `AMBIENT_VIBES` in the service |
 | how a PrimeNG component looks | `ambient.preset.ts` first; `_ambient-components.scss` only if no token exists |
 | a reusable surface or layout | `_ambient-glass.scss` / `_ambient-layout.scss` |
 | a reusable piece of UI with behaviour | a component in this folder |
@@ -46,18 +49,98 @@ If the second screen would want it slightly different, it does not.
 
 ## Theming
 
-Two axes, both applied by writing to `<html>` and nothing else:
+Three axes, all applied by writing to `<html>` and nothing else:
 
 | | written as | switched by |
 |---|---|---|
 | colour scheme | `class="amb-dark"` on `<html>` | `AmbientThemeService.setScheme('light' \| 'dark' \| 'system')` |
 | accent | `data-amb-accent="teal"` on `<html>` | `AmbientThemeService.setAccent('teal')` |
+| — a custom one | `data-amb-accent="custom"` plus the ramp as inline properties | `AmbientThemeService.setCustomAccent('#4f46e5')` |
+| vibe | `data-amb-vibe="glass"` on `<html>` | `AmbientThemeService.setVibe('glass')` |
 | rail collapsed | `.amb-shell--rail` on the shell | `[(collapsed)]` on `<amb-sidebar>` |
 
-No component subscribes to either, and none needs to. The tokens redefine
+No component subscribes to any of them, and none needs to. The tokens redefine
 themselves under those selectors, and PrimeNG follows because its own theme
 tokens are `var(--amb-*)` — including its `primary` ramp, which is what makes the
 accent switchable at runtime with no theme regeneration and no re-render.
+
+### Where a user changes them
+
+Two ways in, **one implementation**: `<amb-appearance-controls>` is the three
+settings, and nothing else — no heading, no card, no drawer.
+
+| | |
+|---|---|
+| `/appearance` | the screen, in the navigation rail. This is the way in for anyone signed in |
+| `<amb-theme-switcher>` | the sun icon, which opens `<amb-appearance-panel>` — the same controls in a drawer. Only the signed-out screens use it now, since the screen above is behind the auth guard; pass `[pageLink]="false"` where that screen cannot be reached |
+
+A page and a drawer that each built their own radio groups would drift within a
+week, and the one that got less use would be the one with the bug. The only
+thing the `layout` input changes is how many style tiles sit on a row and how
+tall their previews are.
+
+**Render `<amb-appearance-panel>` once per screen.** Each instance carries its
+own drawer, so two means two focus traps and every control announced twice.
+
+### Vibes
+
+Scheme answers "light or dark", accent answers "what colour", and a **vibe**
+answers *what the interface is made of*: Minimalist (the default), Modern
+Ambient, Glassmorphism, Material Design, Neumorphism.
+
+Every one is a block of token overrides in `_ambient-vibes.scss` and **not one is
+a rule about a component**. That is the test a new vibe has to pass: if it needs
+a selector for a card, the card was never properly tokenised, and the fix is a
+token rather than an exception. Adding the axis moved five hard-coded blurs and
+two hard-coded inset shadows into tokens (`--amb-glass-filter-*`,
+`--amb-mask-filter`, `--amb-sunken-shadow`, `--amb-shadow-pressed`,
+`--amb-fill-sheen`) and changed nothing else.
+
+Three things about the selectors are load-bearing:
+
+- Each vibe emits its colours twice, as `:root:not(.amb-dark)[data-amb-vibe=…]`
+  and `:root.amb-dark[data-amb-vibe=…]`. Both are (0,3,0), so they beat the
+  scheme blocks on specificity and are mutually exclusive rather than
+  order-dependent.
+- Every rule also matches a **descendant** carrying the attribute, which is what
+  lets the appearance panel render a live thumbnail of each vibe rather than a
+  drawing of one. A vibe therefore has to declare its full set of tokens — a
+  vibe that inherited half of them would, inside a tile, inherit them from
+  whichever vibe the root is set to. That is why `ambient` restates the
+  defaults instead of relying on them.
+- Because tokens can now land on an element other than `<html>`, each colour
+  block re-derives `--amb-surface-1/2/3/sunken` from its own tint through the
+  `surfaces` mixin. A `var()` inside a custom property is substituted where the
+  property is *declared*, so the copies inherited from the root cannot be
+  re-pointed by overriding the tint further down.
+
+The capability and preference fallbacks at the end of `_ambient-tokens.scss`
+carry matching `[data-amb-vibe]` selectors so they still outrank every vibe. A
+vibe is a taste; "this browser cannot blur" and "this reader asked for less
+transparency" are not.
+
+### A custom accent
+
+`setCustomAccent('#4f46e5')` generates a full eleven-step palette from one
+colour and writes it as inline custom properties — inline, because there is no
+stylesheet block to select, and inline styles outrank every selector. Everything
+downstream still reads nothing but `--amb-accent-*`, so no component can tell a
+generated palette from an authored one.
+
+The ramp is built in OKLCH (`ambient-accent-ramp.ts`), and **which step becomes
+the accent is measured, not assumed**: the light-mode accent is the first step
+from 500 down whose contrast with white clears 4.5:1, the dark-mode accent the
+first from 400 up that clears it against a dark surface. That is the same rule
+the hand-made palettes were built by, and the spec asserts it reproduces their
+choices exactly — including teal and emerald nominating 700 where indigo
+nominates 600. So a user cannot pick a colour that produces an unreadable
+button; the worst they can do is produce a darker one than they expected.
+
+Two keys are stored: the colour, and the generated ramp. The ramp is a cache for
+the bootstrap script in `index.html`, which replays it before the first paint so
+a custom theme does not flash indigo on reload — it validates every name and
+value against a pattern first, because storage is writable by anything else on
+the origin. The service regenerates from the colour and never trusts the cache.
 
 Three places name the dark class and **must agree**: `_ambient-tokens.scss`
 (`:root.amb-dark`), `app.config.ts` (`darkModeSelector`), and the service.
@@ -147,15 +230,11 @@ needs `!important` or a doubled selector to beat PrimeNG — and the reset sits
 ## Using it from a screen
 
 ```ts
-imports: [AmbientPageComponent, AmbientPageHeaderComponent, AmbientCardComponent]
+imports: [AmbientPageComponent, AmbientCardComponent]
 ```
 
 ```html
 <amb-page>
-  <amb-page-header title="Tasks" [subtitle]="summary()">
-    <p-button label="New task" icon="pi pi-plus-circle" (onClick)="openCreate()" />
-  </amb-page-header>
-
   <amb-card title="Open work">…</amb-card>
 </amb-page>
 ```

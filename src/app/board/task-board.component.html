@@ -6,14 +6,18 @@
   rejectButtonStyleClass="p-button-text p-button-secondary"
 ></p-confirmdialog>
 
-<amb-page width="wide">
-  <amb-page-header [title]="'board.title' | t" [subtitle]="summary()">
+<!-- The default reading column, not `wide`. The board used to take every pixel
+     it could get, which put its columns wider than the topbar above them — and
+     with both now carrying visible edges, that read as a mistake. Three columns
+     at the shared width are still comfortable. -->
+<amb-page>
+  <div class="amb-page-actions amb-page-actions--end">
     <p-button
       [label]="'tasks.new' | t"
       icon="pi pi-plus-circle"
       (onClick)="openCreate('TODO')"
     ></p-button>
-  </amb-page-header>
+  </div>
 
   @if (loading()) {
     <div class="board-columns">
@@ -102,6 +106,7 @@
             [id]="columnId(column.status)"
             [cdkDropListData]="column.tasks"
             [cdkDropListConnectedTo]="columnIds"
+            [cdkDropListAutoScrollStep]="autoScrollStep"
             (cdkDropListDropped)="onDrop($event, column.status)"
           >
             @for (task of column.tasks; track task.id) {
@@ -110,18 +115,22 @@
                 [class.board-card--done]="task.completed"
                 cdkDrag
                 [cdkDragData]="task"
+                [cdkDragStartDelay]="dragStartDelay"
               >
-                <!-- Shown in place of the card while it is being dragged, so the column
-                     does not collapse and reflow under the cursor. -->
-                <div class="board-card__placeholder" *cdkDragPlaceholder></div>
+                <!-- No `*cdkDragPlaceholder`. Without one the CDK clones the
+                     card itself, so the gap left behind is exactly the size of
+                     the thing that left it; a hand-written placeholder had to
+                     guess at a height and the column jumped every time a card
+                     taller or shorter than the guess was picked up. The clone
+                     is styled into a dashed well in the stylesheet. -->
+                <!-- Title first. The priority pill used to lead, which put a
+                     coloured chip at the top of every card in three columns and
+                     made the thing you are actually scanning for — the title —
+                     the second line every time. It reads better in the meta row
+                     at the foot, beside the other fact about when this is due. -->
+                <div class="board-card__head">
+                  <h3 class="board-card__title">{{ task.title }}</h3>
 
-                <div class="board-card__top">
-                  <amb-badge
-                    [severity]="prioritySeverityOf(task)"
-                    [label]="priorityLabel(task)"
-                    [icon]="priorityIconOf(task)"
-                    rounded
-                  />
                   <div class="board-card__actions">
                     <p-button
                       icon="pi pi-pen-to-square"
@@ -148,8 +157,6 @@
                   </div>
                 </div>
 
-                <h3 class="board-card__title">{{ task.title }}</h3>
-
                 @if (task.description) {
                   <p class="board-card__description">{{ task.description }}</p>
                 }
@@ -167,19 +174,31 @@
                   </div>
                 }
 
-                @if (task.dueDate) {
-                  <div
-                    class="board-card__due"
-                    [class]="dueClass(task)"
-                    [pTooltip]="dueTooltip(task)"
-                    tooltipPosition="top"
-                  >
-                    <i class="pi pi-calendar" aria-hidden="true"></i>
-                    <span class="amb-num">
-                      {{ asDate(task.dueDate) | date: 'MMM d' : undefined : dateLocale() }}
+                <!-- The two facts about the task that are not its name: how
+                     urgent, and when. One quiet row, the priority leading and
+                     the date trailing. -->
+                <footer class="board-card__meta">
+                  <amb-badge
+                    [severity]="prioritySeverityOf(task)"
+                    [label]="priorityLabel(task)"
+                    [icon]="priorityIconOf(task)"
+                    rounded
+                  />
+
+                  @if (task.dueDate) {
+                    <span
+                      class="board-card__due"
+                      [class]="dueClass(task)"
+                      [pTooltip]="dueTooltip(task)"
+                      tooltipPosition="top"
+                    >
+                      <i class="pi pi-calendar" aria-hidden="true"></i>
+                      <span class="amb-num">
+                        {{ asDate(task.dueDate) | date: 'MMM d' : undefined : dateLocale() }}
+                      </span>
                     </span>
-                  </div>
-                }
+                  }
+                </footer>
               </article>
             } @empty {
               <p class="board-column__empty">{{ 'board.columnEmpty' | t }}</p>

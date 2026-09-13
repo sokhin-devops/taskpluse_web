@@ -1,26 +1,29 @@
 /* =========================================================================
    Dashboard
 
-   A hero figure and KPI tiles, a two-series trend chart, and two magnitude
-   breakdowns. The page column, the cards, the tiles and the empty state all
-   come from the Ambient layer; what is left here is the three things only this
-   screen has — the hero meter, the hand-written trend chart, and the magnitude
-   bars.
+   A KPI row, then one three-column grid: a two-series trend chart spanning two
+   columns beside a status summary, and a row of three below it. The page
+   column, the cards, the tiles, the shortcut tiles and the empty state all come
+   from the Ambient layer; what is left here is the four things only this screen
+   has — the status bar, the hand-written trend chart, the magnitude bars, and
+   the grid that arranges them.
 
    Chart colour is not declared here. `--amb-viz-*` in `_ambient-tokens.scss`
-   holds the validated categorical pair (checked for separation under simulated
-   colour blindness and for contrast against the card surface), so the two series
-   hues are theme tokens like every other colour in the product.
+   holds both the validated categorical pair (the two trend series) and the
+   validated ordinal ramp (the status bar's three ordered classes), so every
+   series hue is a theme token like any other colour in the product.
 
    Sections
      1. KPI row
-     2. Hero figure + meter
-     3. Chart controls + legend
-     4. Trend chart
-     5. Tooltip
-     6. Table view
-     7. Magnitude bars
-     8. Responsive
+     2. The content grid
+     3. Status: lead figure + stacked bar
+     4. Shortcuts
+     5. Chart controls + legend
+     6. Trend chart
+     7. Tooltip
+     8. Table view
+     9. Magnitude bars
+    10. Responsive
    ========================================================================= */
 
 @use 'ambient' as amb;
@@ -30,72 +33,163 @@
 }
 
 /* -- 1. KPI row -----------------------------------------------------------
-   Five tiles, with the hero spanning the whole row above them.
+   Four tiles across, collapsing to two and then one.
 
-   Sharing a row does not divide evenly: a double-width hero plus five single
-   tiles needs seven columns, and any six-column arrangement leaves one tile
-   stranded on a second row beside a gap. Giving the hero the whole row is both
-   gapless and more prominent, which is what a lead figure wants anyway.
+   `auto-fit` with a floor rather than a fixed count, so the row reflows on its
+   own width instead of on a media query — and `min()` in the floor is what stops
+   it overflowing a 320px phone.
    ------------------------------------------------------------------------- */
 
 .dash-kpis {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: var(--amb-gap-grid);
 }
 
-/* -- 2. Hero figure + meter -----------------------------------------------
-   The dashboard's single lead number: one ratio against a limit, so a big
-   figure plus a meter rather than a two-slice pie.
+/* -- 2. The content grid ---------------------------------------------------
+   Three columns. The trend spans two of them and everything else takes one, so
+   the page reads as a wide chart beside a narrow summary, then a row of three —
+   and it is one grid rather than three sections each inventing their own.
+
+   Cards are grid items directly: `<amb-card>` is `display: block`, so the
+   column it lands in sizes it, and `height: 100%` inside the card is what makes
+   two cards in a row end level regardless of which has more content.
    ------------------------------------------------------------------------- */
 
-.dash-hero {
-  grid-column: 1 / -1;
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--amb-gap-grid);
+  align-items: stretch;
+}
+
+.dash-grid__wide {
+  grid-column: span 2;
+}
+
+/* -- 3. Status: lead figure + stacked bar ---------------------------------
+   One ratio as a number, then the whole distribution as one bar. The figure
+   answers "how far along"; the bar answers "and where is the rest".
+   ------------------------------------------------------------------------- */
+
+.dash-status {
   display: flex;
   flex-direction: column;
   gap: var(--amb-space-2);
-  padding: var(--amb-pad-card);
 }
 
-.dash-hero__value {
+/* Proportional figures, not tabular: this is a large standalone number, and
+   equal-width digits make it look loose at display size. */
+.dash-status__figure {
   display: flex;
   align-items: baseline;
   gap: 0.125rem;
 
   @include amb.figure(var(--amb-text-4xl));
+
+  font-variant-numeric: normal;
 }
 
-.dash-hero__unit {
+.dash-status__unit {
   font-size: var(--amb-text-xl);
   font-weight: var(--amb-weight-medium);
   color: var(--amb-text-subtle);
 }
 
-.dash-hero__caption {
+.dash-status__caption {
   font-size: var(--amb-text-sm);
   color: var(--amb-text-muted);
 }
 
-/* A well, like every other track in the system, so the fill reads as sitting
-   inside the surface rather than painted on it. */
-.dash-meter {
-  height: 0.5rem;
-  margin-top: 0.125rem;
-  overflow: hidden;
-  border-radius: var(--amb-radius-pill);
-  background: var(--amb-viz-track);
-  box-shadow: inset 0 1px 2px rgb(20 26 48 / 0.05);
+/* The bar. `gap` is the surface showing through between segments — 2px of it,
+   the one spacer the whole system uses — rather than a border drawn around each
+   one, which would add ink that is not data.
+
+   `flex-basis` carries the share and `flex-grow: 0` holds it, so a segment is
+   exactly its percentage wide. `min-width` keeps a 1% slice from collapsing to
+   a hairline nobody can see or hover. */
+.dash-status__bar {
+  display: flex;
+  gap: 2px;
+  height: 0.625rem;
+  margin-top: var(--amb-space-2);
 }
 
-.dash-meter__fill {
-  height: 100%;
+.dash-status__segment {
+  flex: 0 0 auto;
+  min-width: 0.375rem;
   border-radius: var(--amb-radius-pill);
-  background: linear-gradient(90deg, var(--amb-viz-1), var(--amb-accent-500));
+  background: var(--amb-viz-seq-2);
 
-  @include amb.transition-prop(width, var(--amb-duration-slow));
+  @include amb.transition-prop(flex-basis, var(--amb-duration-slow));
+
+  &[data-step='1'] {
+    background: var(--amb-viz-seq-1);
+  }
+
+  &[data-step='3'] {
+    background: var(--amb-viz-seq-3);
+  }
 }
 
-/* -- 3. Chart controls + legend ------------------------------------------- */
+/* The legend is not optional here: it is the only place the counts appear as
+   text, which is what keeps the bar from being the sole way to read them. */
+.dash-status__legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--amb-space-1);
+  margin-top: var(--amb-space-2);
+}
+
+.dash-status__item {
+  display: flex;
+  align-items: center;
+  gap: var(--amb-space-2);
+  font-size: var(--amb-text-sm);
+}
+
+.dash-status__key {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--amb-radius-pill);
+  background: var(--amb-viz-seq-2);
+
+  &[data-step='1'] {
+    background: var(--amb-viz-seq-1);
+  }
+
+  &[data-step='3'] {
+    background: var(--amb-viz-seq-3);
+  }
+}
+
+/* Text wears text tokens, never the series colour. The dot beside it carries
+   identity; a label in a pale ramp step would be illegible on the surface. */
+.dash-status__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--amb-text-muted);
+
+  @include amb.truncate;
+}
+
+.dash-status__count {
+  flex: none;
+  font-weight: var(--amb-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--amb-text);
+}
+
+/* -- 4. Shortcuts ---------------------------------------------------------- */
+
+.dash-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 6rem), 1fr));
+  gap: var(--amb-space-2);
+}
+
+/* -- 5. Chart controls + legend ------------------------------------------- */
 
 .dash-chart__controls {
   display: flex;
@@ -135,7 +229,7 @@
   background: var(--amb-viz-2);
 }
 
-/* -- 4. Trend chart -------------------------------------------------------
+/* -- 6. Trend chart -------------------------------------------------------
    The SVG scales with its container; strokes are pinned to their specified
    width with vector-effect, so a 2px line stays 2px at any size.
    ------------------------------------------------------------------------- */
@@ -218,7 +312,7 @@
   cursor: crosshair;
 }
 
-/* -- 5. Tooltip -----------------------------------------------------------
+/* -- 7. Tooltip -----------------------------------------------------------
    HTML rather than SVG text: real wrapping, real font sizing, and it can sit
    above the plot without being clipped.
    ------------------------------------------------------------------------- */
@@ -283,7 +377,7 @@
   }
 }
 
-/* -- 6. Table view --------------------------------------------------------
+/* -- 8. Table view --------------------------------------------------------
    The accessible route to the same figures. A plain table rather than
    `<p-table>`: there is no sorting, paging or selection here, and PrimeNG's
    table would bring all of that machinery for a static grid of numbers.
@@ -330,16 +424,11 @@
   text-align: right;
 }
 
-/* -- 7. Magnitude bars ---------------------------------------------------
+/* -- 9. Magnitude bars ---------------------------------------------------
    One series per card, so one hue and no legend: the card title says what is
    plotted. Bars are capped in thickness and rounded only at the data end.
    ------------------------------------------------------------------------- */
 
-.dash-breakdowns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--amb-gap-grid);
-}
 
 .dash-bars {
   display: flex;
@@ -366,11 +455,14 @@
   max-width: 100%;
 }
 
+/* A well, like every other track in the system, so the fill reads as sitting
+   inside the surface rather than painted on it — and so it follows the style:
+   pressed under Neumorphism, flat under Minimalist. */
 .dash-bars__track {
   height: 0.625rem;
   border-radius: var(--amb-radius-xs);
   background: var(--amb-viz-track);
-  box-shadow: inset 0 1px 2px rgb(20 26 48 / 0.05);
+  box-shadow: var(--amb-sunken-shadow);
 }
 
 /* Square at the baseline, rounded at the data end. The minimum width keeps a
@@ -406,25 +498,30 @@
   color: var(--amb-text-muted);
 }
 
-:host ::ng-deep .dash-skeleton-gap {
-  margin: var(--amb-space-2) 0;
-}
+/* -- 10. Responsive -------------------------------------------------------- */
 
-/* -- 8. Responsive -------------------------------------------------------- */
+/* The KPI row needs nothing here: `auto-fit` already reflows it on its own
+   width. The content grid does, because a span cannot be expressed as a floor —
+   two of its three columns are one item. */
 
+/* Below the trend chart's comfortable width the grid folds to two columns, and
+   the chart takes both. A line chart of 30 days in a third of the page is a
+   smear; everything else is a list and reads fine at half width. */
 @include amb.respond-below(amb.$amb-bp-xl) {
-  .dash-kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .dash-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @include amb.respond-below(amb.$amb-bp-md) {
-  .dash-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .dash-breakdowns {
-    grid-template-columns: minmax(0, 1fr);
+  /* One column: nothing can span two of it, and leaving the span in place would
+     make the chart the only item on a two-column row that no longer exists. */
+  .dash-grid__wide {
+    grid-column: auto;
   }
 
   .dash-chart__controls {
@@ -433,7 +530,7 @@
 }
 
 @include amb.respond-below(amb.$amb-bp-xs) {
-  .dash-hero__value {
+  .dash-status__figure {
     font-size: var(--amb-text-3xl);
   }
 

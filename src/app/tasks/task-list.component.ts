@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -9,6 +10,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { PopoverModule } from 'primeng/popover';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
@@ -19,9 +21,9 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   AmbientBadgeComponent,
   AmbientEmptyStateComponent,
+  AmbientFormFieldComponent,
   AmbientInputDirective,
   AmbientPageComponent,
-  AmbientPageHeaderComponent,
   AmbientTableComponent,
   AmbientToolbarComponent
 } from '../ambient/ambient';
@@ -78,6 +80,7 @@ const DEFAULT_PAGE_SIZE = 10;
     InputIconModule,
     InputTextModule,
     MultiSelectModule,
+    PopoverModule,
     SelectButtonModule,
     SkeletonModule,
     TableModule,
@@ -86,9 +89,9 @@ const DEFAULT_PAGE_SIZE = 10;
     TaskFormComponent,
     AmbientBadgeComponent,
     AmbientEmptyStateComponent,
+    AmbientFormFieldComponent,
     AmbientInputDirective,
     AmbientPageComponent,
-    AmbientPageHeaderComponent,
     AmbientTableComponent,
     AmbientToolbarComponent,
     TranslatePipe
@@ -104,6 +107,7 @@ export class TaskListComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly i18n = inject(LocaleService);
+  private readonly route = inject(ActivatedRoute);
 
   /** Handed to the `date` pipe on the due-date column. */
   protected readonly dateLocale = this.i18n.dateLocale;
@@ -133,8 +137,20 @@ export class TaskListComponent implements OnInit {
   readonly first = signal(0);
   readonly rows = signal(DEFAULT_PAGE_SIZE);
 
-  private sortField: TaskSortField = 'dueDate';
-  private sortDirection: 'asc' | 'desc' = 'asc';
+  /**
+   * The order the list is always in.
+   *
+   * <p>Fixed rather than driven by sortable column headers. The screen answers
+   * "what is coming up", and due date ascending is that answer; a heading that
+   * re-sorted by title or status turned the page into something else from four
+   * different places, while the filters above ask the same questions more
+   * clearly and narrow the set rather than shuffling it.</p>
+   *
+   * <p>Still sent to the server on every request, so the ordering is applied
+   * across the whole result set rather than within the page that came back.</p>
+   */
+  private readonly sortField: TaskSortField = 'dueDate';
+  private readonly sortDirection: 'asc' | 'desc' = 'asc';
 
   private readonly searchInput = new Subject<string>();
 
@@ -182,37 +198,27 @@ export class TaskListComponent implements OnInit {
   readonly hasFilters = computed(() => this.activeFilterCount() > 0);
 
   /**
-   * The line under the heading: how many tasks, and whether they are filtered.
+   * How many of the three pickers inside the filter popover are narrowing the
+   * list — which is what the count on its button means.
    *
-   * <p>The singular and plural are separate keys rather than a noun swapped
-   * into one sentence. English can get away with the latter; most languages
-   * cannot, because the number agrees with more of the sentence than the noun.
-   * Khmer has no plural at all and simply uses the same string for both, which
-   * this shape allows and a hard-coded `+ 's'` would not.</p>
+   * <p>Not {@link activeFilterCount}: that one also counts the search term and
+   * the scope, and both of those are visible in the toolbar already. A badge
+   * saying "3" above a panel containing one selection would be describing
+   * something the reader cannot see from there.</p>
    */
-  readonly summary = computed(() => {
-    if (this.loading()) {
-      return this.i18n.t('tasks.summary.loading');
-    }
+  readonly attributeFilterCount = computed(
+    () =>
+      (this.selectedStatuses().length > 0 ? 1 : 0) +
+      (this.selectedPriorities().length > 0 ? 1 : 0) +
+      (this.selectedTagIds().length > 0 ? 1 : 0)
+  );
 
-    const count = this.totalRecords();
-    if (count === 0) {
-      return this.i18n.t(
-        this.hasFilters() ? 'tasks.summary.noMatches' : 'tasks.summary.none'
-      );
-    }
-
-    const one = count === 1;
-    if (this.hasFilters()) {
-      return this.i18n.t(
-        one ? 'tasks.summary.matching.one' : 'tasks.summary.matching.other',
-        { count }
-      );
-    }
-    return this.i18n.t(one ? 'tasks.summary.total.one' : 'tasks.summary.total.other', {
-      count
-    });
+  /** The same count as the button's badge wants it: a string, or nothing. */
+  readonly attributeFilterBadge = computed(() => {
+    const count = this.attributeFilterCount();
+    return count > 0 ? String(count) : undefined;
   });
+
 
   // --- dialog state ------------------------------------------------------
 
@@ -220,6 +226,8 @@ export class TaskListComponent implements OnInit {
   selectedTask: Task | null = null;
 
   ngOnInit(): void {
+    this.applyQueryParams();
+
     // The tag list feeds the filter picker and the form's picker.
     this.tagService.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       error: () => undefined
@@ -241,14 +249,11 @@ export class TaskListComponent implements OnInit {
    * there is no fetch in {@code ngOnInit} that would race with it and paint twice.</p>
    */
   onLazyLoad(event: TableLazyLoadEvent): void {
+    // Paging only. The event still carries sort fields, and they are ignored:
+    // the table has no sortable headers, so anything there would be PrimeNG's
+    // defaults rather than a choice anyone made.
     this.first.set(event.first ?? 0);
     this.rows.set(event.rows ?? DEFAULT_PAGE_SIZE);
-
-    const field = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
-    if (field) {
-      this.sortField = field as TaskSortField;
-      this.sortDirection = event.sortOrder === -1 ? 'desc' : 'asc';
-    }
     this.reload();
   }
 
@@ -314,6 +319,40 @@ export class TaskListComponent implements OnInit {
     this.selectedPriorities.set([]);
     this.selectedTagIds.set([]);
     this.applyFilterChange();
+  }
+
+  /**
+   * Applies what the caller asked for in the URL: a search term, a quick-filter
+   * scope, and whether to open straight into the create form.
+   *
+   * <p>All of it is seeded <em>before</em> the table's first lazy load rather
+   * than applied after it, so the screen opens on the results instead of
+   * fetching everything and then filtering. The controls above the table bind
+   * the same signals, so they show the incoming state without being told.</p>
+   *
+   * <p>{@code scope} in particular was being sent and never read. The dashboard
+   * tiles have always linked to {@code /tasks?scope=overdue}, and until now that
+   * landed on an unfiltered list — the number was a dead end, which is the one
+   * thing {@code <amb-stat-card>} exists not to be.</p>
+   */
+  private applyQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+
+    const term = params.get('q');
+    if (term) {
+      this.search.set(term);
+    }
+
+    const scope = params.get('scope');
+    if (scope === 'open' || scope === 'overdue' || scope === 'done' || scope === 'all') {
+      this.scope.set(scope);
+    }
+
+    // A shortcut into the create form, so "New task" from anywhere in the
+    // product is one navigation rather than a navigation and then a click.
+    if (params.get('new') !== null) {
+      this.openCreate();
+    }
   }
 
   // --- row actions -------------------------------------------------------

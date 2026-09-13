@@ -21,6 +21,18 @@
 export const AMBIENT_PREFERENCE_KEYS = {
   scheme: 'amb-theme',
   accent: 'amb-accent',
+  /** The colour a generated palette was built from, as `#rrggbb`. */
+  customAccent: 'amb-accent-custom',
+  /**
+   * The generated palette itself, as JSON.
+   *
+   * <p>Stored as well as the colour above so the bootstrap script can put a
+   * custom palette back before the first paint without carrying a copy of the
+   * OKLab conversions. {@code AmbientThemeService} regenerates from the colour
+   * rather than reading this, so it is a cache and never a source of truth.</p>
+   */
+  accentRamp: 'amb-accent-ramp',
+  vibe: 'amb-vibe',
   locale: 'amb-locale',
   navCollapsed: 'amb-nav-collapsed'
 } as const;

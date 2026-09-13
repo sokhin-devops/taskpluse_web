@@ -1,7 +1,6 @@
 import {
   CdkDrag,
   CdkDragDrop,
-  CdkDragPlaceholder,
   CdkDropList,
   moveItemInArray,
   transferArrayItem
@@ -20,8 +19,7 @@ import {
   AmbientBadgeComponent,
   AmbientCardComponent,
   AmbientEmptyStateComponent,
-  AmbientPageComponent,
-  AmbientPageHeaderComponent
+  AmbientPageComponent
 } from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
 import { Tag, readableTextOn } from '../core/tag.model';
@@ -58,7 +56,6 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary';
   imports: [
     CdkDropList,
     CdkDrag,
-    CdkDragPlaceholder,
     DatePipe,
     ButtonModule,
     ConfirmDialogModule,
@@ -70,7 +67,6 @@ type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary';
     AmbientCardComponent,
     AmbientEmptyStateComponent,
     AmbientPageComponent,
-    AmbientPageHeaderComponent,
     TranslatePipe
   ],
   providers: [MessageService, ConfirmationService],
@@ -95,6 +91,35 @@ export class TaskBoardComponent implements OnInit {
   /** Ids of every drop list, so each column accepts cards from all the others. */
   readonly columnIds = TASK_STATUSES.map((status) => `board-${status}`);
 
+  /**
+   * How long a press has to be held before it becomes a drag.
+   *
+   * <p>Zero for a mouse: a pointer that has already been pressed on a card is
+   * unambiguous, and a delay there is just lag.</p>
+   *
+   * <p>Not zero for touch, because on a touch screen the same gesture means two
+   * things. Without a delay the first pixel of a swipe over a card starts
+   * dragging it, so the board cannot be scrolled by anyone whose thumb happens
+   * to land on a card — which, in three columns of cards, is most of the
+   * screen. 150ms is long enough to tell a swipe from a press and short enough
+   * that a deliberate pick-up still feels immediate.</p>
+   */
+  readonly dragStartDelay = { touch: 150, mouse: 0 };
+
+  /**
+   * Pixels per frame the page scrolls while a card is held near its edge.
+   *
+   * <p>The CDK's default is 2, which is about a second and a half to cross a
+   * laptop screen — long enough that people give up and drop the card
+   * somewhere wrong. This is roughly a screen per second.</p>
+   *
+   * <p>It only does anything because the shell's scroll container is marked
+   * {@code cdkScrollable}; the CDK will not scroll an ancestor it has not been
+   * told about, and before that a card simply could not be dragged below the
+   * fold.</p>
+   */
+  readonly autoScrollStep = 12;
+
   readonly skeletonCards: number[] = [0, 1, 2];
 
   readonly skeletonColumns = computed(() =>
@@ -110,17 +135,6 @@ export class TaskBoardComponent implements OnInit {
 
   readonly isEmpty = computed(() => !this.loading() && this.totalTasks() === 0);
 
-  readonly summary = computed(() => {
-    if (this.loading()) {
-      return this.i18n.t('board.summary.loading');
-    }
-    const total = this.totalTasks();
-    if (total === 0) {
-      return this.i18n.t('board.summary.none');
-    }
-    const done = this.columns().find((column) => column.status === 'DONE')?.tasks.length ?? 0;
-    return this.i18n.t('board.summary', { open: total - done, done });
-  });
 
   // --- dialog state ------------------------------------------------------
 

@@ -36,6 +36,23 @@
 
 @use 'ambient-accents' as accents;
 
+// The third axis: what the interface is made of. Every vibe in it is a block of
+// token overrides against the ones declared below, so it belongs to this file
+// even though it is written next door.
+//
+// Sass emits a used module's CSS *before* the CSS of the file that uses it, so
+// every vibe rule lands above the `:root` blocks here. That is deliberate and
+// it is safe in both directions:
+//
+//   The vibes still win over the defaults, on specificity rather than order —
+//   each is `[data-amb-vibe]` deep, and the blocks below are not.
+//
+//   The capability and preference fallbacks in section 5 still win over the
+//   vibes, on order rather than specificity — they tie at (0,3,0) and come
+//   last. Which is the right way round: a vibe is a taste, and "this browser
+//   cannot blur" is not.
+@use 'ambient-vibes';
+
 // -- 1. Breakpoints and palettes -------------------------------------------
 //
 // Declared in their own modules and forwarded from here, so anything that
@@ -82,10 +99,24 @@
   --amb-blur-xl: 34px;
   --amb-blur-saturate: 180%;
 
-  // The one recipe every glass surface uses. Kept as a token so raising the
-  // blur across the product is one edit rather than fifteen.
+  // The recipes every blurred surface uses. Kept as tokens so raising the blur
+  // across the product is one edit rather than fifteen — and so a vibe that is
+  // not made of glass can switch all five off at once without a single rule
+  // about a component.
+  //
+  //   filter          panels, cards, the rail and the topbar
+  //   filter-overlay  dialogs, drawers, menus — deeper, because an overlay
+  //                   sits over content rather than over the known canvas
+  //   filter-soft     chrome that is small and often repeated: ghost buttons,
+  //                   toasts, messages
+  //   filter-field    inputs, tooltips. No saturation bump: at this radius it
+  //                   buys nothing and it is the most-repeated surface here
+  //   mask-filter     the modal backdrop
   --amb-glass-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
   --amb-glass-filter-overlay: blur(var(--amb-blur-xl)) saturate(var(--amb-blur-saturate));
+  --amb-glass-filter-soft: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
+  --amb-glass-filter-field: blur(var(--amb-blur-sm));
+  --amb-mask-filter: blur(var(--amb-blur-sm)) saturate(120%);
 
   // -- Spacing -------------------------------------------------------------
   //
@@ -214,6 +245,14 @@
 
   --amb-sidebar-width: 15.5rem;
   --amb-topbar-height: 3.75rem;
+
+  // How far the shell holds off the edge of the viewport, and the gap between
+  // its panels. One number for both, because they are the same number: the
+  // navigation rail floats on the canvas rather than being welded to the left
+  // edge, and the eye reads it as floating only while the space around it is
+  // even on all four sides. Change this and the whole application loosens or
+  // tightens together.
+  --amb-shell-inset: var(--amb-space-4);
 
   // The reading column. Wider than a plain prose measure because the shell
   // spends horizontal space on the sidebar, and a narrow column beside it would
@@ -398,6 +437,24 @@
   --amb-viz-track-soft: rgb(42 111 214 / 0.2);
   --amb-viz-grid: rgb(22 27 46 / 0.08);
 
+  // The ordinal ramp: one hue, light to dark, for categories that have an
+  // order — a workflow running To do → In progress → Done, a funnel, tiers.
+  // Not the categorical pair above, which is for series that are merely
+  // different; colouring an ordered scale categorically throws away the one
+  // thing the reader most needs to see, which is the direction of travel.
+  //
+  // Step 2 is `--amb-viz-1` itself, so the ramp is built around the hue the
+  // rest of the product's charts already use rather than beside it.
+  //
+  // Validated, not chosen by eye: monotone lightness, an OKLCH ΔL of at least
+  // 0.06 between steps, one hue throughout, and the light end clearing 2:1
+  // against the *darkest* surface any vibe puts behind it — which is
+  // Neumorphism's #e8ebf2, not white. A ramp checked only against white fails
+  // there, quietly, for the people who chose that style.
+  --amb-viz-seq-1: #6b9fe2;
+  --amb-viz-seq-2: #2a6fd6;
+  --amb-viz-seq-3: #123c7a;
+
   // -- Loading placeholders ------------------------------------------------
   //
   // A skeleton is a well with a sweep across it, so both colours have to flip:
@@ -429,6 +486,25 @@
   --amb-shadow-md: 0 1px 2px rgb(20 26 48 / 0.05), 0 12px 30px -12px rgb(20 26 48 / 0.16);
   --amb-shadow-lg: 0 2px 4px rgb(20 26 48 / 0.05), 0 22px 48px -16px rgb(20 26 48 / 0.2);
   --amb-shadow-xl: 0 2px 6px rgb(20 26 48 / 0.07), 0 40px 80px -24px rgb(20 26 48 / 0.3);
+
+  // Two shadows that are not steps on the ramp, because they are the ramp's
+  // opposite: light returning *into* a surface rather than falling out of it.
+  //
+  //   pressed  what an interactive surface shows while it is held down
+  //   sunken   a well — an input, a meter track, a segmented control's groove
+  //
+  // Tokens rather than literals in the mixins because they are the single place
+  // a vibe expresses whether this interface has modelling at all. Minimalist
+  // sets both to `none`; neumorphism sets both to its two lights, inverted.
+  --amb-shadow-pressed: var(--amb-shadow-sm);
+  --amb-sunken-shadow: inset 0 1px 3px rgb(0 0 0 / 0.07),
+    inset 0 -1px 0 0 var(--amb-highlight);
+
+  // The specular line along the top of a *filled* surface — a solid button, a
+  // selected segment. White rather than `--amb-highlight` because it sits on a
+  // saturated accent fill rather than on a tint, and 18% is the alpha that
+  // reads on every palette instead of only on the dark ones.
+  --amb-fill-sheen: inset 0 1px 0 0 rgb(255 255 255 / 0.18);
 
   // The accent halo. Used for hover on an interactive surface and, at a stronger
   // alpha, for the focus ring.
@@ -570,6 +646,15 @@
   --amb-viz-track-soft: rgb(106 169 255 / 0.26);
   --amb-viz-grid: rgb(255 255 255 / 0.09);
 
+  // Re-stepped for dark rather than flipped. The light ramp's dark end is
+  // invisible here, so the whole ramp shifts up and compresses: the step that
+  // has to work hardest on dark is the *darkest* one, and #4479cf clears 3:1
+  // against the lightest surface any vibe puts behind it (Neumorphism's
+  // #23262e). Step 2 is this scheme's `--amb-viz-1`, as in light mode.
+  --amb-viz-seq-1: #b3d0f7;
+  --amb-viz-seq-2: #6aa9ff;
+  --amb-viz-seq-3: #4479cf;
+
   --amb-skeleton-base: rgb(255 255 255 / 0.07);
   --amb-skeleton-sheen: rgb(255 255 255 / 0.08);
 
@@ -589,6 +674,11 @@
   --amb-shadow-lg: 0 2px 4px rgb(0 0 0 / 0.45), 0 22px 48px -16px rgb(0 0 0 / 0.65);
   --amb-shadow-xl: 0 2px 6px rgb(0 0 0 / 0.5), 0 40px 80px -24px rgb(0 0 0 / 0.75);
 
+  // Deeper than the light well, and the bottom highlight is the dark scheme's
+  // much subtler `--amb-highlight` rather than white.
+  --amb-sunken-shadow: inset 0 1px 3px rgb(0 0 0 / 0.3),
+    inset 0 -1px 0 0 var(--amb-highlight);
+
   --amb-glow-soft: 0 0 0 4px rgb(var(--amb-accent-rgb) / 0.16);
   --amb-glow-focus: 0 0 0 3px rgb(var(--amb-accent-rgb) / 0.36);
 
@@ -607,16 +697,24 @@
 
 // A browser without `backdrop-filter` would otherwise show the canvas gradient
 // straight through unblurred text, so the surfaces go nearly opaque instead.
+//
+// The second selector in each block exists only to reach the same specificity
+// as a vibe's colour block — `:root:not(.amb-dark)[data-amb-vibe='glass']` and
+// its dark twin are both (0,3,0). Tying on specificity and winning on source
+// order is what makes this authoritative over every vibe, present and future,
+// without naming any of them.
 
 @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-  :root {
+  :root,
+  :root:not(.amb-dark)[data-amb-vibe] {
     --amb-glass-opacity-sunken: 0.86;
     --amb-glass-opacity-1: 0.95;
     --amb-glass-opacity-2: 0.97;
     --amb-glass-opacity-3: 1;
   }
 
-  :root.amb-dark {
+  :root.amb-dark,
+  :root.amb-dark[data-amb-vibe] {
     --amb-glass-opacity-sunken: 0.88;
     --amb-glass-opacity-1: 0.96;
     --amb-glass-opacity-2: 0.98;
@@ -628,8 +726,13 @@
 // and no ambient glows, without losing the layout, the depth cues or the
 // hierarchy — the shadows and borders still carry all of it.
 
+// The paired `[data-amb-vibe]` selectors are here for the same reason as above:
+// glassmorphism asks for 46% opaque surfaces and a reader who has turned
+// transparency off has already answered that question.
+
 @media (prefers-reduced-transparency: reduce) {
-  :root {
+  :root,
+  :root:not(.amb-dark)[data-amb-vibe] {
     --amb-glass-opacity-sunken: 1;
     --amb-glass-opacity-1: 1;
     --amb-glass-opacity-2: 1;
@@ -643,10 +746,24 @@
     --amb-inverse-surface: #151a2e;
   }
 
-  :root.amb-dark {
+  :root.amb-dark,
+  :root.amb-dark[data-amb-vibe] {
     --amb-surface-sunken: #10141f;
     --amb-mask: rgb(2 4 10 / 0.8);
     --amb-inverse-surface: #e8ecf6;
+  }
+
+  // Neumorphism is the exception to the exception. Its surfaces are *already*
+  // opaque and are meant to be the exact colour of the ground, so the generic
+  // opaque-white override above would paint a white card onto a grey canvas and
+  // destroy the one thing the vibe is. It keeps its own fills; it had no
+  // transparency to reduce in the first place.
+  :root:not(.amb-dark)[data-amb-vibe='neumorph'] {
+    --amb-surface-sunken: #e8ebf2;
+  }
+
+  :root.amb-dark[data-amb-vibe='neumorph'] {
+    --amb-surface-sunken: #23262e;
   }
 }
 

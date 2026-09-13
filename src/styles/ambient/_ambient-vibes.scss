@@ -1,0 +1,803 @@
+// =========================================================================
+// Ambient UI — vibes
+//
+// The third theming axis. Scheme answers "light or dark"; accent answers "what
+// colour"; a **vibe** answers "what is this interface made of" — whether a card
+// is a sheet of glass, a piece of paper, a pressed cushion, or nothing at all.
+//
+// `<html data-amb-vibe="…">` selects one. Like the other two axes it is applied
+// by writing one attribute and nothing else: every vibe below is a block of
+// token overrides, and not one of them is a rule about a component. That is the
+// whole point — if a vibe needed a component rule, the thing it was styling was
+// never properly tokenised.
+//
+//   minimal     flat, hairline-ruled, almost no depth. The default.
+//   ambient     soft translucency, drifting glows, a lit rim on every surface.
+//   glass       maximum blur and transparency, bright rims, round corners.
+//   material    opaque paper, Material elevation, tonal fills, no blur.
+//   neumorph    surfaces the exact colour of the canvas, extruded by shadow.
+//
+// -- The selectors --------------------------------------------------------
+//
+// Each vibe emits three rules, and the split is the one the token file already
+// makes between what a scheme changes and what it does not: geometry and motion
+// once, then colours per scheme.
+//
+// Every rule matches two things — the document root carrying the attribute, and
+// any *descendant* carrying it. The second is what lets the appearance panel
+// show a live thumbnail of each vibe: a preview tile sets `data-amb-vibe` on
+// itself and is painted by these same tokens, so the picture and the thing it
+// is a picture of cannot drift apart. It is the same mechanism the accent
+// swatches use, and it costs nothing, because a token declared on an element
+// always beats the same token inherited from an ancestor whatever the
+// specificity.
+//
+// -- Why `ambient` restates the defaults ----------------------------------
+//
+// Because of those thumbnails. A vibe that overrode nothing would, inside a
+// preview tile, simply inherit whichever vibe the root is currently set to —
+// so "Modern Ambient" would be a picture of Neumorphism for anyone who had
+// chosen Neumorphism. Every vibe therefore declares its own full set.
+//
+// That leaves the bare `:root` values in `_ambient-tokens.scss` as a fallback
+// for the case where the attribute is missing entirely, and nothing more. They
+// are never on screen: the bootstrap script in `index.html` writes the
+// attribute before the first paint. So the two being near-identical today is
+// convenient rather than load-bearing, and they are free to diverge.
+//
+// -- What outranks a vibe -------------------------------------------------
+//
+// A capability or a stated preference: a browser with no `backdrop-filter`, or
+// a reader who has asked for less transparency. Those blocks live at the end of
+// `_ambient-tokens.scss` and carry matching `[data-amb-vibe]` selectors so they
+// still win. A vibe is a taste; those are not.
+//
+// Sections
+//   1. The selector helpers
+//   2. Shared recipes
+//   3. Minimalist
+//   4. Modern Ambient
+//   5. Glassmorphism
+//   6. Material Design
+//   7. Neumorphism
+// =========================================================================
+
+// -- 1. The selector helpers -----------------------------------------------
+//
+// Three mixins, so that the shape of a vibe block is declared once and every
+// vibe below reads as nothing but its values.
+//
+// The specificity is deliberate and the two selectors in each pair are equal,
+// which is what keeps "the root" and "a preview tile" behaving identically:
+//
+//   shape  (0,2,0)  beats bare `:root`
+//   light  (0,3,0)  beats `:root.amb-dark` from the token file, and is mutually
+//   dark   (0,3,0)  exclusive with its twin rather than order-dependent
+
+/// Geometry, blur and motion: the things that are the same in both schemes.
+@mixin vibe-shape($name) {
+  :root[data-amb-vibe='#{$name}'],
+  :root [data-amb-vibe='#{$name}'] {
+    @content;
+  }
+}
+
+/// The vibe's light-scheme colours.
+@mixin vibe-light($name) {
+  :root:not(.amb-dark)[data-amb-vibe='#{$name}'],
+  :root:not(.amb-dark) [data-amb-vibe='#{$name}'] {
+    @content;
+  }
+}
+
+/// The vibe's dark-scheme colours.
+@mixin vibe-dark($name) {
+  :root.amb-dark[data-amb-vibe='#{$name}'],
+  :root.amb-dark [data-amb-vibe='#{$name}'] {
+    @content;
+  }
+}
+
+// -- 2. Shared recipes -----------------------------------------------------
+//
+// Three of the five vibes are "not glass" in some direction, and each says so
+// the same way. Naming the recipes keeps the vibes themselves down to what
+// actually distinguishes them.
+
+/// Re-derives the four surface steps from the tint and opacities the calling
+/// block has just set.
+///
+/// Without this a vibe would be correct on `<html>` and wrong in a preview
+/// tile, and the reason is worth knowing. `--amb-surface-2` is declared once,
+/// in `_ambient-tokens.scss`, as `rgb(var(--amb-surface-tint) / …)`. A custom
+/// property's `var()`s are substituted where it is *declared*, not where it is
+/// used — so on the root, where the vibe also lands, it resolves against the
+/// vibe's tint and is right. A tile deeper in the page inherits the already
+/// substituted value, and overriding the tint on the tile cannot reach back
+/// into it. Re-declaring the four steps inside the block is what makes the
+/// tokens resolve against that block's own tint, wherever the block matched.
+///
+/// A vibe that wants one step to be a flat colour rather than a tint over the
+/// canvas — minimalist's well, Material's filled field — simply declares it
+/// after this, in the same block.
+@mixin surfaces {
+  --amb-surface-sunken: rgb(var(--amb-surface-tint) / var(--amb-glass-opacity-sunken));
+  --amb-surface-1: rgb(var(--amb-surface-tint) / var(--amb-glass-opacity-1));
+  --amb-surface-2: rgb(var(--amb-surface-tint) / var(--amb-glass-opacity-2));
+  --amb-surface-3: rgb(var(--amb-surface-tint) / var(--amb-glass-opacity-3));
+}
+
+/// Every blur in the product, off. Five tokens rather than one because the
+/// system blurs chrome, surfaces, overlays, fields and masks at different
+/// strengths — but a vibe that is not made of glass wants none of them.
+@mixin no-blur {
+  --amb-glass-filter: none;
+  --amb-glass-filter-overlay: none;
+  --amb-glass-filter-soft: none;
+  --amb-glass-filter-field: none;
+  --amb-mask-filter: none;
+}
+
+/// No sheen falling across the face, no lit rim around the edge, and no bevel
+/// on a filled button. What is left is a plain surface whose depth comes from
+/// its shadow alone.
+///
+/// The two shadows are zeroed rather than removed because each is composed into
+/// a longer `box-shadow` list at its call sites; a token that resolved to
+/// nothing would leave a stray comma and invalidate the whole declaration.
+@mixin no-glass-edges {
+  --amb-glass-sheen: none;
+  --amb-glass-inset: 0 0 0 0 transparent;
+  --amb-fill-sheen: 0 0 0 0 transparent;
+}
+
+/// A plain ground: no glows, no mesh, no raking highlight, no vignette. The
+/// `<amb-background>` layers are all still rendered — they just paint in
+/// nothing, which costs less than a component that has to know which vibe is
+/// live.
+@mixin plain-canvas {
+  --amb-glow-1: transparent;
+  --amb-glow-2: transparent;
+  --amb-glow-3: transparent;
+  --amb-bg-mesh: transparent;
+  --amb-bg-sheen: transparent;
+  --amb-bg-vignette: transparent;
+}
+
+// -- 3. Minimalist ---------------------------------------------------------
+//
+// The default, and the quietest thing the system can be. Structure is carried
+// by hairlines and whitespace; depth is nearly absent and texture entirely so.
+//
+// It is the default because it is the one that never gets in the way of the
+// content — a task list is read, not admired — and because it is the cheapest
+// to paint: no blur anywhere means no compositing layer per surface.
+
+@include vibe-shape('minimal') {
+  // Tighter corners. Large radii read as soft and friendly, which is the
+  // opposite of what this vibe is for.
+  --amb-radius-field: 8px;
+  --amb-radius-card: 10px;
+  --amb-radius-panel: 12px;
+  --amb-radius-overlay: 12px;
+
+  // No hover lift. A surface that rises is an effect; here a hover is a change
+  // of tint and nothing more.
+  --amb-lift: 0px;
+
+  @include no-blur;
+}
+
+@include vibe-light('minimal') {
+  // Barely a gradient: the ground is one flat near-white, and the two steps
+  // exist only so the foot of a long page is not identical to its head.
+  --amb-canvas: #f7f8fa;
+  --amb-canvas-deep: #f3f4f7;
+
+  // Opaque. Without blur a translucent surface just shows the ground through
+  // the text, which is the one thing this vibe cannot afford.
+  --amb-surface-tint: 255 255 255;
+  --amb-glass-opacity-sunken: 1;
+  --amb-glass-opacity-1: 1;
+  --amb-glass-opacity-2: 1;
+  --amb-glass-opacity-3: 1;
+
+  @include surfaces;
+  --amb-surface-sunken: #f1f3f7;
+  --amb-surface-solid: #ffffff;
+
+  // Borders do the work the shadows are no longer doing, so they are a step
+  // stronger than the baseline rather than a step weaker.
+  --amb-border: rgb(22 27 46 / 0.11);
+  --amb-border-strong: rgb(22 27 46 / 0.17);
+  --amb-border-subtle: rgb(22 27 46 / 0.07);
+  --amb-border-dashed: rgb(22 27 46 / 0.18);
+  --amb-highlight: transparent;
+
+  // Present, but only just. A card should read as sitting on the page rather
+  // than floating above it; the largest steps are reserved for things that
+  // genuinely float, and even those are modest.
+  --amb-shadow-xs: 0 1px 1px rgb(20 26 48 / 0.04);
+  --amb-shadow-sm: 0 1px 2px rgb(20 26 48 / 0.06);
+  --amb-shadow-md: 0 1px 3px rgb(20 26 48 / 0.07);
+  --amb-shadow-lg: 0 4px 12px -4px rgb(20 26 48 / 0.12);
+  --amb-shadow-xl: 0 12px 32px -12px rgb(20 26 48 / 0.2);
+  --amb-shadow-pressed: none;
+
+  // A well is a fill and a hairline. No inset shadow: this vibe has no
+  // modelling anywhere else, and one cut-in field would look like a mistake.
+  --amb-sunken-shadow: none;
+
+  --amb-glow-soft: 0 0 0 3px rgb(var(--amb-accent-rgb) / 0.1);
+  --amb-surface-hover: rgb(var(--amb-accent-rgb) / 0.055);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.1);
+
+  @include no-glass-edges;
+  @include plain-canvas;
+}
+
+@include vibe-dark('minimal') {
+  // Neutral charcoal rather than the baseline's blue-black. The blue is there
+  // to make the glows read as light in a room, and there are no glows here.
+  --amb-canvas: #121419;
+  --amb-canvas-deep: #0e1014;
+
+  --amb-surface-tint: 25 28 35;
+  --amb-glass-opacity-sunken: 1;
+  --amb-glass-opacity-1: 1;
+  --amb-glass-opacity-2: 1;
+  --amb-glass-opacity-3: 1;
+
+  @include surfaces;
+  --amb-surface-sunken: #15171d;
+  --amb-surface-solid: #191c23;
+
+  --amb-border: rgb(255 255 255 / 0.1);
+  --amb-border-strong: rgb(255 255 255 / 0.18);
+  --amb-border-subtle: rgb(255 255 255 / 0.06);
+  --amb-border-dashed: rgb(255 255 255 / 0.2);
+  --amb-highlight: transparent;
+
+  --amb-shadow-xs: 0 1px 1px rgb(0 0 0 / 0.3);
+  --amb-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --amb-shadow-md: 0 1px 3px rgb(0 0 0 / 0.4);
+  --amb-shadow-lg: 0 4px 12px -4px rgb(0 0 0 / 0.5);
+  --amb-shadow-xl: 0 12px 32px -12px rgb(0 0 0 / 0.6);
+  --amb-shadow-pressed: none;
+  --amb-sunken-shadow: none;
+
+  --amb-glow-soft: 0 0 0 3px rgb(var(--amb-accent-rgb) / 0.14);
+  --amb-surface-hover: rgb(255 255 255 / 0.05);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.16);
+
+  @include no-glass-edges;
+  @include plain-canvas;
+}
+
+// -- 4. Modern Ambient -----------------------------------------------------
+//
+// The product's signature look, and the values `_ambient-tokens.scss` declares
+// as its defaults: translucent surfaces over a lit canvas, a sheen falling
+// across each face, a specular rim along every top edge, and three very slow
+// glows drifting behind all of it.
+//
+// Restated here rather than inherited from the defaults so that it can be
+// previewed like any other vibe — see the header.
+
+@include vibe-shape('ambient') {
+  --amb-radius-field: var(--amb-radius-md);
+  --amb-radius-card: var(--amb-radius-lg);
+  --amb-radius-panel: var(--amb-radius-xl);
+  --amb-radius-overlay: var(--amb-radius-xl);
+
+  --amb-lift: -1px;
+
+  --amb-blur-saturate: 180%;
+  --amb-glass-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
+  --amb-glass-filter-overlay: blur(var(--amb-blur-xl)) saturate(var(--amb-blur-saturate));
+  --amb-glass-filter-soft: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
+  --amb-glass-filter-field: blur(var(--amb-blur-sm));
+  --amb-mask-filter: blur(var(--amb-blur-sm)) saturate(120%);
+}
+
+@include vibe-light('ambient') {
+  --amb-canvas: #eef1f8;
+  --amb-canvas-deep: #e4e8f3;
+
+  --amb-surface-tint: 255 255 255;
+  --amb-glass-opacity-sunken: 0.46;
+  --amb-glass-opacity-1: 0.62;
+  --amb-glass-opacity-2: 0.74;
+  --amb-glass-opacity-3: 0.9;
+
+  @include surfaces;
+  --amb-surface-solid: #ffffff;
+
+  --amb-border: rgb(22 27 46 / 0.08);
+  --amb-border-strong: rgb(22 27 46 / 0.13);
+  --amb-border-subtle: rgb(22 27 46 / 0.05);
+  --amb-border-dashed: rgb(22 27 46 / 0.14);
+
+  --amb-highlight: rgb(255 255 255 / 0.85);
+  --amb-glass-edge: rgb(255 255 255 / 0.5);
+  --amb-glass-inset: inset 0 1px 0 0 var(--amb-highlight),
+    inset 0 0 0 1px var(--amb-glass-edge);
+  --amb-glass-sheen: linear-gradient(
+    155deg,
+    rgb(255 255 255 / 0.16) 0%,
+    rgb(255 255 255 / 0.04) 34%,
+    rgb(255 255 255 / 0) 62%
+  );
+  --amb-fill-sheen: inset 0 1px 0 0 rgb(255 255 255 / 0.18);
+
+  --amb-shadow-xs: 0 1px 2px rgb(20 26 48 / 0.05);
+  --amb-shadow-sm: 0 1px 2px rgb(20 26 48 / 0.05), 0 4px 12px -6px rgb(20 26 48 / 0.1);
+  --amb-shadow-md: 0 1px 2px rgb(20 26 48 / 0.05), 0 12px 30px -12px rgb(20 26 48 / 0.16);
+  --amb-shadow-lg: 0 2px 4px rgb(20 26 48 / 0.05), 0 22px 48px -16px rgb(20 26 48 / 0.2);
+  --amb-shadow-xl: 0 2px 6px rgb(20 26 48 / 0.07), 0 40px 80px -24px rgb(20 26 48 / 0.3);
+  --amb-shadow-pressed: var(--amb-shadow-sm);
+  --amb-sunken-shadow: inset 0 1px 3px rgb(0 0 0 / 0.07),
+    inset 0 -1px 0 0 var(--amb-highlight);
+
+  --amb-glow-soft: 0 0 0 4px rgb(var(--amb-accent-rgb) / 0.12);
+  --amb-surface-hover: rgb(var(--amb-accent-rgb) / 0.055);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.1);
+
+  --amb-glow-1: rgb(var(--amb-accent-rgb) / 0.16);
+  --amb-glow-2: rgb(var(--amb-ambient-violet-rgb) / 0.13);
+  --amb-glow-3: rgb(var(--amb-ambient-cyan-rgb) / 0.11);
+  --amb-bg-mesh: rgb(22 27 46 / 0.03);
+  --amb-bg-sheen: rgb(255 255 255 / 0.62);
+  --amb-bg-vignette: rgb(22 27 46 / 0.05);
+}
+
+@include vibe-dark('ambient') {
+  --amb-canvas: #0a0d17;
+  --amb-canvas-deep: #05070e;
+
+  --amb-surface-tint: 42 50 78;
+  --amb-glass-opacity-sunken: 0.34;
+  --amb-glass-opacity-1: 0.45;
+  --amb-glass-opacity-2: 0.55;
+  --amb-glass-opacity-3: 0.76;
+
+  @include surfaces;
+  --amb-surface-solid: #161c2e;
+
+  --amb-border: rgb(255 255 255 / 0.09);
+  --amb-border-strong: rgb(255 255 255 / 0.16);
+  --amb-border-subtle: rgb(255 255 255 / 0.055);
+  --amb-border-dashed: rgb(255 255 255 / 0.18);
+
+  --amb-highlight: rgb(255 255 255 / 0.16);
+  --amb-glass-edge: rgb(255 255 255 / 0.06);
+  --amb-glass-inset: inset 0 1px 0 0 var(--amb-highlight),
+    inset 0 0 0 1px var(--amb-glass-edge);
+  --amb-glass-sheen: linear-gradient(
+    155deg,
+    rgb(255 255 255 / 0.07) 0%,
+    rgb(255 255 255 / 0.02) 36%,
+    rgb(255 255 255 / 0) 64%
+  );
+  --amb-fill-sheen: inset 0 1px 0 0 rgb(255 255 255 / 0.18);
+
+  --amb-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --amb-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px -6px rgb(0 0 0 / 0.5);
+  --amb-shadow-md: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 30px -12px rgb(0 0 0 / 0.6);
+  --amb-shadow-lg: 0 2px 4px rgb(0 0 0 / 0.45), 0 22px 48px -16px rgb(0 0 0 / 0.65);
+  --amb-shadow-xl: 0 2px 6px rgb(0 0 0 / 0.5), 0 40px 80px -24px rgb(0 0 0 / 0.75);
+  --amb-shadow-pressed: var(--amb-shadow-sm);
+  --amb-sunken-shadow: inset 0 1px 3px rgb(0 0 0 / 0.3),
+    inset 0 -1px 0 0 var(--amb-highlight);
+
+  --amb-glow-soft: 0 0 0 4px rgb(var(--amb-accent-rgb) / 0.16);
+  --amb-surface-hover: rgb(255 255 255 / 0.05);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.16);
+
+  --amb-glow-1: rgb(var(--amb-accent-rgb) / 0.26);
+  --amb-glow-2: rgb(var(--amb-ambient-violet-rgb) / 0.22);
+  --amb-glow-3: rgb(var(--amb-ambient-cyan-rgb) / 0.18);
+  --amb-bg-mesh: rgb(255 255 255 / 0.028);
+  --amb-bg-sheen: rgb(255 255 255 / 0.045);
+  --amb-bg-vignette: rgb(0 0 0 / 0.35);
+}
+
+// -- 5. Glassmorphism ------------------------------------------------------
+//
+// Modern Ambient pushed as far as it goes and still stays readable: heavier
+// blur, more transparency, brighter rims, rounder corners, stronger glows
+// behind it all. Transparency is only worth having if there is something behind
+// it, which is why this is the one vibe that makes the canvas *more* colourful
+// rather than less.
+//
+// The floor on readability is `--amb-glass-opacity-3`. An overlay sits over
+// arbitrary content rather than over the known canvas, so it stays the most
+// opaque surface in the system no matter how far the rest is pushed.
+
+@include vibe-shape('glass') {
+  --amb-radius-field: 12px;
+  --amb-radius-card: 20px;
+  --amb-radius-panel: 26px;
+  --amb-radius-overlay: 26px;
+
+  --amb-lift: -2px;
+
+  // Heavier than the baseline everywhere, and pushed further on saturation:
+  // averaging a colourful area desaturates it, and the more you blur the more
+  // saturation has to go back in before it reads as glass rather than as fog.
+  --amb-blur-saturate: 200%;
+  --amb-glass-filter: blur(30px) saturate(var(--amb-blur-saturate));
+  --amb-glass-filter-overlay: blur(42px) saturate(var(--amb-blur-saturate));
+  --amb-glass-filter-soft: blur(22px) saturate(var(--amb-blur-saturate));
+  --amb-glass-filter-field: blur(14px);
+  --amb-mask-filter: blur(14px) saturate(130%);
+}
+
+@include vibe-light('glass') {
+  // Bluer and deeper than the baseline canvas. The glass has to be refracting
+  // something; over a near-white ground it is only a pale rectangle.
+  --amb-canvas: #e7ecfb;
+  --amb-canvas-deep: #dae1f4;
+
+  --amb-surface-tint: 255 255 255;
+  --amb-glass-opacity-sunken: 0.36;
+  --amb-glass-opacity-1: 0.5;
+  --amb-glass-opacity-2: 0.58;
+  --amb-glass-opacity-3: 0.82;
+
+  @include surfaces;
+  --amb-surface-solid: #ffffff;
+
+  // The rim carries the edge here, so the border is white light rather than an
+  // ink hairline — an ink border on a bright glass surface reads as a crack.
+  --amb-border: rgb(255 255 255 / 0.5);
+  --amb-border-strong: rgb(255 255 255 / 0.75);
+  --amb-border-subtle: rgb(255 255 255 / 0.32);
+  --amb-border-dashed: rgb(255 255 255 / 0.6);
+
+  --amb-highlight: rgb(255 255 255 / 1);
+  --amb-glass-edge: rgb(255 255 255 / 0.62);
+  --amb-glass-inset: inset 0 1px 0 0 var(--amb-highlight),
+    inset 0 0 0 1px var(--amb-glass-edge);
+  --amb-glass-sheen: linear-gradient(
+    152deg,
+    rgb(255 255 255 / 0.32) 0%,
+    rgb(255 255 255 / 0.1) 38%,
+    rgb(255 255 255 / 0) 66%
+  );
+  --amb-fill-sheen: inset 0 1px 0 0 rgb(255 255 255 / 0.24);
+
+  // Softer and wider than the baseline. A sharp shadow under a blurred surface
+  // reads as a sticker on the page.
+  --amb-shadow-xs: 0 1px 3px -2px rgb(20 26 48 / 0.1);
+  --amb-shadow-sm: 0 2px 8px -4px rgb(20 26 48 / 0.14);
+  --amb-shadow-md: 0 8px 28px -12px rgb(20 26 48 / 0.24);
+  --amb-shadow-lg: 0 18px 48px -18px rgb(20 26 48 / 0.3);
+  --amb-shadow-xl: 0 36px 84px -28px rgb(20 26 48 / 0.38);
+  --amb-shadow-pressed: var(--amb-shadow-sm);
+  --amb-sunken-shadow: inset 0 1px 4px rgb(20 26 48 / 0.1);
+
+  --amb-glow-soft: 0 0 0 5px rgb(var(--amb-accent-rgb) / 0.14);
+  --amb-surface-hover: rgb(var(--amb-accent-rgb) / 0.06);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.12);
+
+  // Roughly double the baseline. The glows are the thing being refracted.
+  --amb-glow-1: rgb(var(--amb-accent-rgb) / 0.3);
+  --amb-glow-2: rgb(var(--amb-ambient-violet-rgb) / 0.26);
+  --amb-glow-3: rgb(var(--amb-ambient-cyan-rgb) / 0.22);
+  --amb-bg-sheen: rgb(255 255 255 / 0.72);
+  --amb-bg-vignette: rgb(22 27 46 / 0.07);
+  // No mesh: a grid read through two sheets of blurred glass is noise rather
+  // than texture.
+  --amb-bg-mesh: transparent;
+}
+
+@include vibe-dark('glass') {
+  --amb-canvas: #070a15;
+  --amb-canvas-deep: #03050c;
+
+  --amb-surface-tint: 42 50 78;
+  --amb-glass-opacity-sunken: 0.28;
+  --amb-glass-opacity-1: 0.38;
+  --amb-glass-opacity-2: 0.46;
+  --amb-glass-opacity-3: 0.72;
+
+  @include surfaces;
+  --amb-surface-solid: #161c2e;
+
+  --amb-border: rgb(255 255 255 / 0.15);
+  --amb-border-strong: rgb(255 255 255 / 0.26);
+  --amb-border-subtle: rgb(255 255 255 / 0.08);
+  --amb-border-dashed: rgb(255 255 255 / 0.22);
+
+  --amb-highlight: rgb(255 255 255 / 0.26);
+  --amb-glass-edge: rgb(255 255 255 / 0.1);
+  --amb-glass-inset: inset 0 1px 0 0 var(--amb-highlight),
+    inset 0 0 0 1px var(--amb-glass-edge);
+  --amb-glass-sheen: linear-gradient(
+    152deg,
+    rgb(255 255 255 / 0.12) 0%,
+    rgb(255 255 255 / 0.035) 40%,
+    rgb(255 255 255 / 0) 68%
+  );
+  --amb-fill-sheen: inset 0 1px 0 0 rgb(255 255 255 / 0.2);
+
+  --amb-shadow-xs: 0 1px 3px -2px rgb(0 0 0 / 0.5);
+  --amb-shadow-sm: 0 2px 8px -4px rgb(0 0 0 / 0.55);
+  --amb-shadow-md: 0 8px 28px -12px rgb(0 0 0 / 0.7);
+  --amb-shadow-lg: 0 18px 48px -18px rgb(0 0 0 / 0.75);
+  --amb-shadow-xl: 0 36px 84px -28px rgb(0 0 0 / 0.85);
+  --amb-shadow-pressed: var(--amb-shadow-sm);
+  --amb-sunken-shadow: inset 0 1px 4px rgb(0 0 0 / 0.4);
+
+  --amb-glow-soft: 0 0 0 5px rgb(var(--amb-accent-rgb) / 0.18);
+  --amb-surface-hover: rgb(255 255 255 / 0.06);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.18);
+
+  --amb-glow-1: rgb(var(--amb-accent-rgb) / 0.38);
+  --amb-glow-2: rgb(var(--amb-ambient-violet-rgb) / 0.32);
+  --amb-glow-3: rgb(var(--amb-ambient-cyan-rgb) / 0.26);
+  --amb-bg-sheen: rgb(255 255 255 / 0.06);
+  --amb-bg-vignette: rgb(0 0 0 / 0.45);
+  --amb-bg-mesh: transparent;
+}
+
+// -- 6. Material Design ----------------------------------------------------
+//
+// Paper and ink: opaque surfaces, no blur, no sheen, and depth carried entirely
+// by Material's own elevation shadows — the two-part umbra/penumbra pair rather
+// than this system's usual soft halo.
+//
+// Two details are Material rather than decoration:
+//
+//   The dark surfaces are a light tonal wash at low alpha over a dark ground,
+//   not a lighter grey. That is exactly how Material 3 builds dark elevation,
+//   and it means the four surface levels separate from one another without four
+//   hand-picked greys — the alpha ladder already in `--amb-glass-opacity-*`
+//   does it. In light mode the same ladder collapses to plain white, because
+//   light Material separates surfaces by shadow alone.
+//
+//   The focus halo is wide and faint rather than narrow and bright. It is
+//   standing in for the state layer, which is what Material puts under a
+//   hovered or focused control.
+
+@include vibe-shape('material') {
+  --amb-radius-field: 8px;
+  --amb-radius-card: 12px;
+  --amb-radius-panel: 16px;
+  --amb-radius-overlay: 12px;
+
+  // Elevation changes on hover; position does not.
+  --amb-lift: 0px;
+
+  // Material's emphasised easing: a near-instant start and a long settle, which
+  // is what makes its motion read as weighty rather than springy.
+  --amb-ease: cubic-bezier(0.2, 0, 0, 1);
+  --amb-ease-soft: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --amb-duration-base: 250ms;
+
+  @include no-blur;
+}
+
+@include vibe-light('material') {
+  // A faint primary tint in the ground, which is what keeps a Material light
+  // theme from reading as grey office software.
+  --amb-canvas: #f8f6fc;
+  --amb-canvas-deep: #f3f0f9;
+
+  --amb-surface-tint: 255 255 255;
+  --amb-glass-opacity-sunken: 1;
+  --amb-glass-opacity-1: 1;
+  --amb-glass-opacity-2: 1;
+  --amb-glass-opacity-3: 1;
+
+  @include surfaces;
+  --amb-surface-solid: #ffffff;
+
+  // The filled field: a tonal wash of the primary rather than a well. Material
+  // has no cut-in inputs.
+  --amb-surface-sunken: rgb(var(--amb-accent-rgb) / 0.06);
+  --amb-sunken-shadow: none;
+
+  // The outline role. One weight, used sparingly — most separation here is
+  // elevation, not a line.
+  --amb-border: rgb(22 27 46 / 0.12);
+  --amb-border-strong: rgb(22 27 46 / 0.2);
+  --amb-border-subtle: rgb(22 27 46 / 0.07);
+  --amb-border-dashed: rgb(22 27 46 / 0.22);
+  --amb-highlight: transparent;
+
+  // Material elevation 1-5. Each is an umbra (tight, dark) plus a penumbra
+  // (wide, soft) — the pair is what makes it read as a lit object rather than
+  // as a drop shadow.
+  --amb-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.2), 0 1px 3px 1px rgb(0 0 0 / 0.1);
+  --amb-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.2), 0 1px 3px 1px rgb(0 0 0 / 0.1);
+  --amb-shadow-md: 0 1px 2px rgb(0 0 0 / 0.2), 0 2px 6px 2px rgb(0 0 0 / 0.12);
+  --amb-shadow-lg: 0 1px 3px rgb(0 0 0 / 0.2), 0 4px 8px 3px rgb(0 0 0 / 0.13);
+  --amb-shadow-xl: 0 2px 3px rgb(0 0 0 / 0.2), 0 6px 10px 4px rgb(0 0 0 / 0.14);
+  --amb-shadow-pressed: 0 1px 2px rgb(0 0 0 / 0.2), 0 1px 3px 1px rgb(0 0 0 / 0.1);
+
+  // The state layer, standing in for Material's ripple.
+  --amb-glow-soft: 0 0 0 8px rgb(var(--amb-accent-rgb) / 0.08);
+  --amb-surface-hover: rgb(var(--amb-accent-rgb) / 0.08);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.12);
+
+  @include no-glass-edges;
+  @include plain-canvas;
+}
+
+@include vibe-dark('material') {
+  // Material 3's dark surface, and one step below it for the ground.
+  --amb-canvas: #141218;
+  --amb-canvas-deep: #100e13;
+
+  // The tonal wash. A near-white tint at 4-13% over the dark ground produces
+  // Material's surface-container ladder, and it produces it from the opacity
+  // steps the system already has rather than from four more hex values.
+  --amb-surface-tint: 232 222 248;
+  --amb-glass-opacity-sunken: 0.04;
+  --amb-glass-opacity-1: 0.05;
+  --amb-glass-opacity-2: 0.08;
+  --amb-glass-opacity-3: 0.13;
+
+  @include surfaces;
+  --amb-surface-solid: #211f26;
+  --amb-sunken-shadow: none;
+
+  --amb-border: rgb(255 255 255 / 0.14);
+  --amb-border-strong: rgb(255 255 255 / 0.22);
+  --amb-border-subtle: rgb(255 255 255 / 0.08);
+  --amb-border-dashed: rgb(255 255 255 / 0.24);
+  --amb-highlight: transparent;
+
+  // Material keeps the same elevation shadows on dark; the tonal wash above is
+  // what actually separates the levels, and the shadow is the ground contact.
+  --amb-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+  --amb-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+  --amb-shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+  --amb-shadow-lg: 0 1px 3px rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
+  --amb-shadow-xl: 0 2px 3px rgb(0 0 0 / 0.3), 0 6px 10px 4px rgb(0 0 0 / 0.15);
+  --amb-shadow-pressed: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+
+  --amb-glow-soft: 0 0 0 8px rgb(var(--amb-accent-rgb) / 0.12);
+  --amb-surface-hover: rgb(var(--amb-accent-rgb) / 0.12);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.18);
+
+  @include no-glass-edges;
+  @include plain-canvas;
+}
+
+// -- 7. Neumorphism --------------------------------------------------------
+//
+// Everything is the same material as the ground, pushed out of it or pressed
+// into it. Three things have to hold for that illusion to survive, and all
+// three are why this vibe overrides what it does:
+//
+//   The ground must be perfectly uniform. `--amb-canvas` and
+//   `--amb-canvas-deep` are set to the same value, and every glow, the mesh and
+//   the vignette are off. A gradient behind an extruded shape gives it away
+//   instantly.
+//
+//   Surfaces must be exactly the ground's colour. `--amb-surface-tint` is the
+//   canvas, at full opacity, for all four levels — there is no lighter card
+//   here, only a card that catches the light differently.
+//
+//   The edge must be light, not a line. Every border goes transparent; the two
+//   shadows are the only thing that draws the shape, one dark at the bottom
+//   right and one light at the top left, from a single light source.
+//
+// The cost is contrast, and it is a real one: an extruded button and the ground
+// are the same colour, so the shape carries none. That is why the focus ring
+// and every piece of text are left exactly as the baseline has them — the
+// modelling is decoration, and it is never what a control depends on to be
+// found.
+
+@include vibe-shape('neumorph') {
+  --amb-radius-field: 14px;
+  --amb-radius-card: 22px;
+  --amb-radius-panel: 28px;
+  --amb-radius-overlay: 22px;
+
+  // Depth changes, position does not: a pressed cushion does not also move.
+  --amb-lift: 0px;
+
+  @include no-blur;
+}
+
+@include vibe-light('neumorph') {
+  // One flat ground, top to bottom.
+  --amb-canvas: #e8ebf2;
+  --amb-canvas-deep: #e8ebf2;
+
+  --amb-surface-tint: 232 235 242;
+  --amb-glass-opacity-sunken: 1;
+  --amb-glass-opacity-1: 1;
+  --amb-glass-opacity-2: 1;
+  --amb-glass-opacity-3: 1;
+
+  @include surfaces;
+  --amb-surface-solid: #e8ebf2;
+  // Overlays are the exception. A dialog floats over arbitrary content rather
+  // than over the known ground, so it is a slightly lifted plane instead of the
+  // same one — otherwise its edge disappears into whatever is behind it.
+  --amb-surface-3: #eef1f7;
+
+  // The two lights. Every shadow in this block is built from exactly these, so
+  // the whole interface is lit from one direction.
+  --amb-neu-dark: rgb(163 177 198 / 0.62);
+  --amb-neu-light: rgb(255 255 255 / 0.95);
+
+  // No lines anywhere. The one survivor is `--amb-border-strong`, which rules
+  // the dividers: a groove rather than a hairline, and without it a divider
+  // simply vanishes.
+  --amb-border: transparent;
+  --amb-border-subtle: transparent;
+  --amb-border-strong: rgb(163 177 198 / 0.45);
+  --amb-border-dashed: rgb(163 177 198 / 0.55);
+  --amb-highlight: transparent;
+
+  --amb-shadow-xs: 2px 2px 4px var(--amb-neu-dark), -2px -2px 4px var(--amb-neu-light);
+  --amb-shadow-sm: 3px 3px 7px var(--amb-neu-dark), -3px -3px 7px var(--amb-neu-light);
+  --amb-shadow-md: 6px 6px 13px var(--amb-neu-dark), -6px -6px 13px var(--amb-neu-light);
+  --amb-shadow-lg: 10px 10px 20px var(--amb-neu-dark), -10px -10px 20px var(--amb-neu-light);
+  --amb-shadow-xl: 16px 16px 32px var(--amb-neu-dark), -16px -16px 32px var(--amb-neu-light);
+
+  // Pressed is the extrusion inverted: the same two lights, inside the shape.
+  // This is the one state in the vibe that is unmistakable without colour.
+  --amb-shadow-pressed: inset 3px 3px 7px var(--amb-neu-dark),
+    inset -3px -3px 7px var(--amb-neu-light);
+  --amb-sunken-shadow: inset 4px 4px 9px var(--amb-neu-dark),
+    inset -4px -4px 9px var(--amb-neu-light);
+
+  // No halo. A glowing ring around a cushion is two lighting models at once.
+  --amb-glow-soft: 0 0 0 0 transparent;
+  --amb-surface-hover: rgb(var(--amb-accent-rgb) / 0.07);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.12);
+
+  @include no-glass-edges;
+  @include plain-canvas;
+}
+
+@include vibe-dark('neumorph') {
+  --amb-canvas: #23262e;
+  --amb-canvas-deep: #23262e;
+
+  --amb-surface-tint: 35 38 46;
+  --amb-glass-opacity-sunken: 1;
+  --amb-glass-opacity-1: 1;
+  --amb-glass-opacity-2: 1;
+  --amb-glass-opacity-3: 1;
+
+  @include surfaces;
+  --amb-surface-solid: #23262e;
+  --amb-surface-3: #282c35;
+
+  // On dark the light side is a lifted slate rather than white: a white
+  // highlight on a charcoal cushion reads as a chrome bevel.
+  --amb-neu-dark: rgb(13 15 19 / 0.72);
+  --amb-neu-light: rgb(56 61 73 / 0.6);
+
+  --amb-border: transparent;
+  --amb-border-subtle: transparent;
+  --amb-border-strong: rgb(255 255 255 / 0.08);
+  --amb-border-dashed: rgb(255 255 255 / 0.12);
+  --amb-highlight: transparent;
+
+  --amb-shadow-xs: 2px 2px 4px var(--amb-neu-dark), -2px -2px 4px var(--amb-neu-light);
+  --amb-shadow-sm: 3px 3px 7px var(--amb-neu-dark), -3px -3px 7px var(--amb-neu-light);
+  --amb-shadow-md: 6px 6px 13px var(--amb-neu-dark), -6px -6px 13px var(--amb-neu-light);
+  --amb-shadow-lg: 10px 10px 20px var(--amb-neu-dark), -10px -10px 20px var(--amb-neu-light);
+  --amb-shadow-xl: 16px 16px 32px var(--amb-neu-dark), -16px -16px 32px var(--amb-neu-light);
+
+  --amb-shadow-pressed: inset 3px 3px 7px var(--amb-neu-dark),
+    inset -3px -3px 7px var(--amb-neu-light);
+  --amb-sunken-shadow: inset 4px 4px 9px var(--amb-neu-dark),
+    inset -4px -4px 9px var(--amb-neu-light);
+
+  --amb-glow-soft: 0 0 0 0 transparent;
+  --amb-surface-hover: rgb(255 255 255 / 0.05);
+  --amb-surface-active: rgb(var(--amb-accent-rgb) / 0.16);
+
+  @include no-glass-edges;
+  @include plain-canvas;
+}

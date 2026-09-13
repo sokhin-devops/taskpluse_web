@@ -17,46 +17,43 @@
       [navLabel]="'nav.landmark' | t"
       [expandLabel]="'nav.expand' | t"
       [collapseLabel]="'nav.collapse' | t"
-    >
-      <!-- Desktop account block. Its counterpart in the topbar is only rendered
-           below the nav breakpoint, where this rail is hidden, so the two are
-           never both in the accessibility tree. -->
-      <div ambSidebarFooter class="app-footer" [class.app-footer--rail]="navCollapsed()">
-        <div class="app-footer__settings">
-          <amb-theme-switcher />
-          <!-- The rail is 72px collapsed, which fits the globe or the tag but
-               not both; the tag becomes a tooltip, as the nav labels do. -->
-          <amb-language-switcher [compact]="navCollapsed()" />
-        </div>
-
-        <button
-          type="button"
-          class="app-account__trigger"
-          (click)="railAccount.toggle($event)"
-          [attr.aria-label]="accountMenuLabel()"
-          aria-haspopup="menu"
-          [pTooltip]="user()?.displayName ?? ('account.label' | t)"
-          tooltipPosition="right"
-          [tooltipDisabled]="!navCollapsed()"
-          [showDelay]="250"
-        >
-          <amb-avatar [initials]="initials()" />
-          <span class="app-account__identity">
-            <span class="app-account__name">{{ user()?.displayName }}</span>
-            <span class="app-account__email">{{ user()?.email }}</span>
-          </span>
-          <i class="pi pi-angle-up app-account__caret" aria-hidden="true"></i>
-        </button>
-        <amb-menu #railAccount [items]="accountMenu()" popup [ariaLabel]="accountMenuLabel()" />
-      </div>
-    </amb-sidebar>
+    />
+    <!-- Nothing projected into the rail's footer any more. The account lives in
+         the topbar, which is on screen at every width — so the rail is the
+         mark, the destinations, and the control that collapses it. -->
   }
 
   <div class="amb-shell__main">
+    @if (!isAuthenticated()) {
+      <!-- Signed out there is no rail and no Appearance screen to reach — it is
+           behind the auth guard — so the control stays here. Someone who
+           prefers dark should not have to sign in to get it.
+
+           Above the scroll container rather than inside it: the signed-out
+           content area centres its one child, and a second child would sit
+           beside the login card rather than above it.
+
+           Its link out to the full screen is suppressed for the same reason it
+           is here at all: following it would bounce straight back to this page. -->
+      <div class="app-guest-bar">
+        <amb-theme-switcher [pageLink]="false" />
+        <amb-language-switcher />
+      </div>
+    }
+
     @if (isAuthenticated()) {
-      <!-- Mobile chrome only: hidden above the nav breakpoint by the layout. -->
-      <header class="amb-shell__topbar">
+      <!-- The bar sits above the scroll container, so nothing ever passes under
+           it. The slot around it is what keeps its edges level with the page:
+           it reserves the same scrollbar gutter the container below reserves,
+           so both boxes are the same width. Without it the bar ran wider than
+           the cards by that gutter on any screen under the content cap. -->
+      <div class="amb-shell__topbar-slot">
+      <amb-topbar [title]="pageTitle()" [subtitle]="greeting()">
+        <!-- The drawer button is the only piece of the bar that is phone-only;
+             above the nav breakpoint the rail is already on screen. -->
         <p-button
+          ambTopbarLead
+          class="app-topbar__menu"
           ambButton="ghost"
           icon="pi pi-bars"
           [rounded]="true"
@@ -64,46 +61,48 @@
           (onClick)="navOpen.set(true)"
         />
 
-        <a
-          class="app-topbar__brand"
-          routerLink="/dashboard"
-          [attr.aria-label]="brand().homeLabel"
-        >
-          {{ brand().name }}
-        </a>
+        <!-- No appearance control here. Signed in, the whole of it lives on the
+             Appearance screen in the rail, which is a navigation item rather
+             than an icon to be found. -->
+        <amb-language-switcher ambTopbarActions />
 
-        <span class="amb-shell__topbar-spacer"></span>
-
-        <amb-theme-switcher />
-        <amb-language-switcher />
-
+        <!-- The account, at every width. The name is hidden on a narrow screen
+             and the chip falls back to the avatar alone — but it is the same
+             one control either way, so there is never a second copy of it in
+             the accessibility tree. -->
         <button
+          ambTopbarActions
           type="button"
-          class="app-account__avatar-button"
+          class="app-account__trigger"
           (click)="topbarAccount.toggle($event)"
           [attr.aria-label]="accountMenuLabel()"
           aria-haspopup="menu"
         >
-          <amb-avatar [initials]="initials()" />
+          <amb-avatar [initials]="initials()" size="small" />
+          <span class="app-account__name">{{ user()?.displayName }}</span>
+          <i class="pi pi-angle-down app-account__caret" aria-hidden="true"></i>
         </button>
-        <amb-menu #topbarAccount [items]="accountMenu()" popup [ariaLabel]="accountMenuLabel()" />
-      </header>
-    } @else {
-      <!-- Signed out there is no chrome to hang the appearance control on, but
-           someone who prefers dark should not have to sign in to get it. It also
-           guarantees AmbientThemeService is instantiated on every route: the
-           bootstrap script has already applied the stored theme, and this is
-           what keeps following the OS afterwards. -->
-      <div class="app-guest-bar">
-        <amb-theme-switcher />
-        <amb-language-switcher />
+        <amb-menu
+          ambTopbarActions
+          #topbarAccount
+          [items]="accountMenu()"
+          popup
+          [ariaLabel]="accountMenuLabel()"
+        />
+      </amb-topbar>
       </div>
     }
 
     <!-- The application's only scroll container; AppComponent sends it back to
          the top between screens. -->
+    <!-- `cdkScrollable` registers this with the CDK's drag-and-drop, which will
+         not auto-scroll an ancestor it has not been told about. Without it a
+         card on the board could not be dragged past the bottom of the window:
+         the page simply would not move, and the only way to reach a position
+         below the fold was to drop the card somewhere else first. -->
     <main
       class="amb-shell__content"
+      cdkScrollable
       #scrollArea
       [class.amb-shell__content--centred]="!isAuthenticated()"
     >

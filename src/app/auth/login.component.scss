@@ -54,14 +54,15 @@
 .auth-card__mark {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  /* Size only. The fill, the rim and the contrast colour come from
+     `.amb-brandmark` in the Ambient layer, which the navigation rail wears too.
+     The shadow is a step heavier here because this mark is three times the
+     area and sits alone on the canvas rather than inside a panel. */
   width: 3rem;
   height: 3rem;
   margin-bottom: var(--amb-space-2);
   border-radius: var(--amb-radius-lg);
-  background: linear-gradient(140deg, var(--amb-accent-500), var(--amb-accent));
-  box-shadow: var(--amb-shadow-md), inset 0 1px 0 rgb(255 255 255 / 0.25);
-  color: var(--amb-accent-contrast);
+  box-shadow: var(--amb-shadow-md), var(--amb-fill-sheen);
 
   i {
     font-size: 1.5rem;

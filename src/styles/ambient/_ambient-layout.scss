@@ -12,14 +12,22 @@
 //   .amb-shell                  viewport-height grid: sidebar | main
 //     .amb-shell__sidebar       docked nav, collapses to a drawer under 900px
 //     .amb-shell__main          column: topbar over content
-//       .amb-shell__topbar      fixed height, never scrolls
+//       .amb-shell__topbar-slot reserves the scrollbar gutter; never scrolls
+//         <amb-topbar>          fixed height, never scrolls, styles its own
 //       .amb-shell__content     the application's ONLY scroll container
 //         .amb-page             the reading column
 //
 // One scroll container is load-bearing. It is what puts the scrollbar beside
 // the content instead of down the edge of the window, and what lets the topbar
 // and sidebar stay put without `position: sticky` and its stacking-context
-// side effects.
+// side effects. The page scrolls *below* the bar, never behind it — which is
+// also why the bar can stay at the panel opacity rather than needing to be
+// opaque enough to hide something sliding underneath.
+//
+// The cost of the bar being outside that container is that it does not give up
+// the scrollbar gutter the container gives up, so it would run wider than the
+// page by exactly that gutter on every screen narrower than
+// `--amb-content-width`. `.amb-shell__topbar-slot` is what pays it back.
 //
 // PrimeFlex still owns everyday layout — `flex`, `gap-*`, `col-*`, alignment.
 // What lives here is only what PrimeFlex has no opinion about: the shell, the
@@ -30,7 +38,7 @@
 //   2. Sidebar
 //   3. Topbar
 //   4. Content and page
-//   5. Page header
+//   5. Page actions
 //   6. Sections
 //   7. Grids
 //   8. Primitives
@@ -54,6 +62,18 @@
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+
+  // The inset. The shell holds off the edge of the viewport on all four sides
+  // and puts the same gap between its panels, so the rail and the bar read as
+  // objects resting on the ambient canvas rather than as regions carved out of
+  // the window. It is what the glass, the glows and the rounded corners were
+  // always for — a surface needs something visible behind it, and until now
+  // the chrome was flush to the edge with nothing showing past it.
+  //
+  // Safe against the viewport height because the reset sets `border-box`
+  // globally: the padding comes out of the 100dvh rather than adding to it.
+  padding: var(--amb-shell-inset);
+  gap: var(--amb-shell-inset);
 
   // The collapse animation. `grid-template-columns` is interpolable while the
   // track count is unchanged, which it is — only the first track's width moves —
@@ -89,20 +109,32 @@
   }
 }
 
+// On a phone the inset is a tax on the only dimension that is scarce. It stays
+// — the panels would look broken squared off against the edge — but it drops to
+// the smallest value that still reads as a margin rather than a misprint.
+@include m.respond-below(t.$amb-bp-sm) {
+  .amb-shell {
+    --amb-shell-inset: var(--amb-space-2);
+  }
+}
+
 .amb-shell__main {
   display: flex;
   flex-direction: column;
   min-width: 0;
   height: 100%;
   overflow: hidden;
+  // No gap between the bar and the content: that distance is the scroll
+  // container's own top padding instead. See `.amb-shell__content`.
 }
 
 // -- 2. Sidebar ------------------------------------------------------------
 //
-// A glass column against the canvas. It has no right border and no shadow of
-// its own: the content beside it sits on the canvas too, and a hard edge
-// between two translucent surfaces reads as a seam. The separation comes from
-// the tint difference alone.
+// A glass panel floating on the canvas. It used to be a column welded to the
+// left edge, separated from the content only by a tint difference and a
+// hairline; now the shell's inset puts canvas on all four sides of it, so it
+// carries a border all the way round, a corner, and a shadow — the same three
+// things every other surface in the system uses to sit on top of something.
 
 .amb-shell__sidebar {
   display: flex;
@@ -117,9 +149,12 @@
   overflow-x: hidden;
 
   background: var(--amb-surface-1);
-  border-right: 1px solid var(--amb-border-subtle);
-  -webkit-backdrop-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
-  backdrop-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
+  background-image: var(--amb-glass-sheen);
+  border: 1px solid var(--amb-border);
+  border-radius: var(--amb-radius-panel);
+  box-shadow: var(--amb-shadow-sm), var(--amb-glass-inset);
+  -webkit-backdrop-filter: var(--amb-glass-filter);
+  backdrop-filter: var(--amb-glass-filter);
 }
 
 // Wider gutters once the rail is wide enough to have them. Kept as an override
@@ -137,46 +172,37 @@
 
 // -- 3. Topbar -------------------------------------------------------------
 //
-// Below the nav breakpoint only. Above it the sidebar already carries the mark,
-// the navigation and the account, and a second bar across the top would be sixty
-// pixels of chrome with nothing in it — every page supplies its own title and
-// actions through `.amb-page-header`.
+// `<amb-topbar>` owns its own appearance. What this file owns is the slot it
+// sits in, and that slot exists for exactly one reason: to make the bar's box
+// the same width as the page's.
 //
-// Because the two never coexist, the account control can appear in both without
-// a screen reader ever meeting it twice.
+// The bar is above the scroll container, so nothing passes under it. But a
+// scroll container reserves a scrollbar gutter and an element above it does
+// not — so the bar ran wider than the cards by that gutter on every screen
+// narrower than `--amb-content-width`, which is most of them.
 //
-// Fixed height and outside the scroll container, so nothing passes under it.
+// `overflow: hidden` makes this slot a scroll container too, which is what lets
+// it honour `scrollbar-gutter` and reserve the identical width. It never
+// scrolls and never shows a scrollbar; it only gives up the same space. The bar
+// then centres inside a box that matches the page's, at every width, with no
+// measuring of scrollbars in JavaScript.
 
-.amb-shell__topbar {
+.amb-shell__topbar-slot {
   flex: none;
-  display: flex;
-  align-items: center;
-  gap: var(--amb-gap-inline);
-  height: var(--amb-topbar-height);
-  padding-inline: var(--amb-gutter);
-
-  background: var(--amb-surface-1);
-  border-bottom: 1px solid var(--amb-border-subtle);
-  -webkit-backdrop-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
-  backdrop-filter: blur(var(--amb-blur-lg)) saturate(var(--amb-blur-saturate));
+  overflow: hidden;
+  scrollbar-gutter: stable;
 }
-
-.amb-shell__topbar-spacer {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-@include m.respond-above(t.$amb-bp-nav) {
-  .amb-shell__topbar {
-    display: none;
-  }
-}
-
-@include m.respond-below(t.$amb-bp-sm) {
-  .amb-shell__topbar {
-    padding-inline: var(--amb-space-4);
-  }
-}
+//
+// It used to be chrome for phones only, on the grounds that above the nav
+// breakpoint the rail already carried everything, so a second bar would be
+// sixty pixels of nothing. It carries the section name, the language and the
+// account at every width now, which is worth the sixty pixels — and it is why
+// the rail carries none of those: two triggers for one menu are two entries in
+// the accessibility tree for one thing.
+//
+// It is capped at `--amb-content-width`, the same column every page uses, so a
+// bar with visible edges and the cards under it line up. See section 4 for the
+// other half of that, which is the scrollbar.
 
 // -- 4. Content and page ---------------------------------------------------
 //
@@ -188,6 +214,16 @@
 // `scrollbar-gutter` reserves the scrollbar's width whether or not it is
 // showing, so moving between a short page and a long one does not shift the
 // content sideways.
+//
+// `both-edges` rather than plain `stable`, and that word is doing real work.
+// The topbar is outside this scroll container; the page is inside it. Reserving
+// on the end edge alone makes this box asymmetric, which moves its centre — so
+// a page capped at the same width as the bar above it, and centred in good
+// faith, landed five pixels to its left. Exactly half a scrollbar. Reserving on
+// both edges puts the two centres back on the same line, and since both are
+// capped at `--amb-content-width` their left and right edges then coincide.
+// The cost is one scrollbar's width of content area on a page wide enough to
+// use it, which is the cheaper of the two.
 
 .amb-shell__content {
   flex: 1 1 auto;
@@ -195,6 +231,17 @@
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
+
+  // The gap under the topbar, as this element's padding rather than as a gap on
+  // the flex parent. The distance on screen is identical; what changes is which
+  // side of the clipping edge it falls on.
+  //
+  // A scroll container clips at its padding box, so with the gap outside it the
+  // first card in a page sat flush against that edge — and an interactive card
+  // rising on hover paints a halo a few pixels above itself, which was being cut
+  // off in a straight line. The same distance on the inside gives it somewhere
+  // to land.
+  padding-top: var(--amb-shell-inset);
 
   // Applies to programmatic scrolling — an in-page anchor, or a control that
   // brings a row into view. The reset in `_ambient-base.scss` turns it off under
@@ -219,7 +266,13 @@
   width: 100%;
   max-width: var(--amb-content-width);
   margin-inline: auto;
-  padding: var(--amb-space-7) var(--amb-gutter) var(--amb-space-10);
+  // No inline padding and no top padding: the shell's inset is already holding
+  // the content off the edges, and the gap under the topbar is already the
+  // right distance. Adding the page's own gutter on top of both was what made
+  // the first card sit twice as far from the bar as the cards sit from each
+  // other. The bottom is the exception — it is deliberately generous so the
+  // last card clears the foot of the scroll rather than ending flush with it.
+  padding: 0 0 var(--amb-space-7);
 
   > * {
     @include m.enter(8px, var(--amb-duration-enter));
@@ -248,47 +301,43 @@
 @include m.respond-below(t.$amb-bp-sm) {
   .amb-page {
     gap: var(--amb-gap-grid);
-    padding: var(--amb-space-5) var(--amb-space-4) var(--amb-space-8);
+    padding-bottom: var(--amb-space-6);
   }
 }
 
-// -- 5. Page header --------------------------------------------------------
+// -- 5. Page actions -------------------------------------------------------
 //
-// Title and supporting line on the left, actions on the right, wrapping to two
-// rows when there is not room. `align-items: flex-start` rather than centre so
-// a two-line title does not drag the buttons down the page with it.
+// What a screen puts at the top of its column: a line about what is below, and
+// the buttons that act on it.
+//
+// This replaced `.amb-page-header`, which also carried an `<h1>` and a subtitle.
+// The topbar names the section now, so every screen was printing its own name
+// twice — once in the bar and again forty pixels below it. What the header was
+// genuinely still doing is this: somewhere for "12 tasks in total" and a New
+// button to sit, which is a row rather than a heading.
+//
+// `align-items: center` is safe here for the same reason the old header needed
+// `flex-start`: there is no two-line title left to drag the buttons down.
 
-.amb-page-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--amb-gap-stack);
-}
-
-.amb-page-header__text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--amb-space-1);
-  min-width: 0;
-}
-
-.amb-page-header__actions {
+.amb-page-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--amb-gap-tight);
+  justify-content: space-between;
+  gap: var(--amb-gap-inline);
+}
+
+// A row with only buttons in it pushes them to the trailing edge, where they
+// would otherwise sit at the leading edge with nothing opposite them.
+.amb-page-actions--end {
+  justify-content: flex-end;
 }
 
 @include m.respond-below(t.$amb-bp-xs) {
   // Full-width actions on a phone: two half-width buttons side by side are
   // narrower than their own labels.
-  .amb-page-header__actions {
-    width: 100%;
-
-    > * {
-      flex: 1 1 auto;
-    }
+  .amb-page-actions > .p-button {
+    flex: 1 1 auto;
   }
 }
 

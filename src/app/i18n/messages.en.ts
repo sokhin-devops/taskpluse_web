@@ -43,7 +43,11 @@ export const EN_MESSAGES = {
   'common.delete': 'Delete',
   'common.actions': 'Actions',
   'common.tryAgain': 'Try again',
-  'common.refresh': 'Refresh',
+  'common.close': 'Close',
+  // What goes between items when a list is joined into one sentence — for a
+  // screen reader, mostly. A catalogue entry because the separator is not the
+  // same character in every script.
+  'common.listSeparator': ', ',
 
   // Failure copy. Separate variants because the right one depends on whether
   // the user is looking at a whole screen that failed, a toast beside one that
@@ -60,11 +64,17 @@ export const EN_MESSAGES = {
   'nav.tasks': 'Tasks',
   'nav.board': 'Board',
   'nav.tags': 'Tags',
+  'nav.appearance': 'Appearance',
   'nav.landmark': 'Main',
   'nav.open': 'Open navigation',
   'nav.expand': 'Expand navigation',
   'nav.collapse': 'Collapse navigation',
   'nav.home': '{name} home',
+
+  // The topbar's own copy. `shell.greeting` takes a first name, so it has to
+  // read naturally with a very short substitution — which is also why the
+  // placeholder sits at the end in English and may not in another language.
+  'shell.greeting': 'Welcome back, {name}',
 
   'account.label': 'Account',
   'account.yours': 'your account',
@@ -74,19 +84,44 @@ export const EN_MESSAGES = {
   // -- Appearance ----------------------------------------------------------
 
   'appearance.legend': 'Appearance',
+  'appearance.title': 'Appearance',
+  'appearance.pageSubtitle': 'Choose how TaskPulse looks. Changes apply as you make them.',
+  // The way out of the drawer, into the screen with room for the previews.
+  'appearance.openPage': 'Open the Appearance page',
   'appearance.scheme': 'Colour scheme',
   'appearance.light': 'Light',
   'appearance.dark': 'Dark',
   'appearance.system': 'System',
   'appearance.accentLegend': 'Accent',
   'appearance.accent': 'Accent colour',
-  'appearance.trigger': 'Appearance: {scheme} theme, {accent} accent',
+  'appearance.trigger': 'Appearance: {vibe} style, {scheme} theme, {accent} accent',
   'appearance.accent.indigo': 'Indigo',
   'appearance.accent.violet': 'Violet',
   'appearance.accent.blue': 'Blue',
   'appearance.accent.teal': 'Teal',
   'appearance.accent.emerald': 'Emerald',
   'appearance.accent.rose': 'Rose',
+  'appearance.accent.custom': 'Custom',
+
+  // The style axis. The hints are one short line each because they sit under a
+  // live preview that has already shown the reader most of the answer — their
+  // job is to name what the picture is doing, not to describe it.
+  'appearance.vibeLegend': 'Style',
+  'appearance.vibe': 'Interface style',
+  'appearance.vibe.minimal': 'Minimalist',
+  'appearance.vibe.minimal.hint': 'Flat, quiet, ruled by hairlines',
+  'appearance.vibe.ambient': 'Modern Ambient',
+  'appearance.vibe.ambient.hint': 'Soft light behind frosted surfaces',
+  'appearance.vibe.glass': 'Glassmorphism',
+  'appearance.vibe.glass.hint': 'Deep blur, bright edges, colour behind',
+  'appearance.vibe.material': 'Material Design',
+  'appearance.vibe.material.hint': 'Solid paper lifted by elevation',
+  'appearance.vibe.neumorph': 'Neumorphism',
+  'appearance.vibe.neumorph.hint': 'Shapes pressed out of one surface',
+
+  'appearance.customPicker': 'Pick an accent colour',
+  'appearance.customHex': 'Accent colour hex code',
+  'appearance.customHexInvalid': 'That is not a colour. Try something like #4f46e5.',
 
   // -- Language ------------------------------------------------------------
 
@@ -142,22 +177,32 @@ export const EN_MESSAGES = {
 
   // -- Dashboard -----------------------------------------------------------
 
-  'dashboard.title': 'Dashboard',
-  'dashboard.subtitle': 'Where your work stands right now.',
   'dashboard.error.title': 'We could not load your dashboard',
   'dashboard.error.toast': 'Could not load the dashboard',
 
   'dashboard.figures': 'Key figures',
-  'dashboard.completionRate': 'Completion rate',
-  'dashboard.completionMeter': 'Completion rate: {caption}',
   'dashboard.noTasks': 'No tasks yet',
   'dashboard.completionCaption': '{completed} of {total} tasks done',
 
   'dashboard.tile.open': 'Open',
-  'dashboard.tile.inProgress': 'In progress',
   'dashboard.tile.overdue': 'Overdue',
   'dashboard.tile.dueToday': 'Due today',
   'dashboard.tile.next7': 'Next 7 days',
+
+  // The status card: a lead figure, then the same question as a part-to-whole.
+  'dashboard.status.title': 'Where the work stands',
+  'dashboard.status.subtitle': 'Every task, by stage',
+  // One segment of the bar, for the description a screen reader hears. Both
+  // parts are substituted so the order can change with the language.
+  'dashboard.status.segment': '{label}: {count}',
+
+  'dashboard.shortcuts.title': 'Shortcuts',
+  'dashboard.shortcut.newTask': 'New task',
+  'dashboard.shortcut.allTasks': 'All tasks',
+  'dashboard.shortcut.board': 'Board',
+  'dashboard.shortcut.tags': 'Tags',
+  'dashboard.shortcut.overdue': 'Overdue',
+  'dashboard.shortcut.completed': 'Completed',
 
   'dashboard.trend.title': 'Created and completed',
   'dashboard.trend.subtitle': '{created} created, {completed} completed in the last {days} days',
@@ -175,7 +220,6 @@ export const EN_MESSAGES = {
     'Line chart of tasks created and completed per day over the last {days} days. Use the table view for the exact figures.',
   'dashboard.trend.empty': 'No activity in this window',
 
-  'dashboard.breakdowns': 'Breakdowns',
   'dashboard.priority.title': 'Open work by priority',
   'dashboard.priority.subtitle': 'Completed tasks are left out.',
   'dashboard.priority.empty': 'Nothing open. Everything is done.',
@@ -197,13 +241,6 @@ export const EN_MESSAGES = {
   'tasks.error.title': 'We could not load your tasks',
   'tasks.error.toast': 'Could not load tasks',
 
-  'tasks.summary.loading': 'Loading your tasks...',
-  'tasks.summary.none': 'Nothing on the list right now.',
-  'tasks.summary.noMatches': 'No tasks match these filters.',
-  'tasks.summary.total.one': '{count} task in total.',
-  'tasks.summary.total.other': '{count} tasks in total.',
-  'tasks.summary.matching.one': '{count} matching task.',
-  'tasks.summary.matching.other': '{count} matching tasks.',
 
   'tasks.search.placeholder': 'Search title and description',
   'tasks.search.label': 'Search tasks by title or description',
@@ -218,6 +255,10 @@ export const EN_MESSAGES = {
   'tasks.filter.priorityLabel': 'Filter by priority',
   'tasks.filter.tags': 'Tags',
   'tasks.filter.tagsLabel': 'Filter by tag',
+  'tasks.filter.more': 'Filters',
+  // The placeholder on each picker inside the panel. "Any" rather than repeating
+  // the field's own name, which the label above it already gives.
+  'tasks.filter.any': 'Any',
   'tasks.filter.clear': 'Clear ({count})',
   'tasks.filter.clearPlain': 'Clear filters',
 
@@ -282,9 +323,6 @@ export const EN_MESSAGES = {
   'board.error.title': 'We could not load your board',
   'board.error.toast': 'Could not load the board',
 
-  'board.summary.loading': 'Loading your board...',
-  'board.summary.none': 'Nothing on the board yet.',
-  'board.summary': '{open} open, {done} done. Drag a card to move it.',
 
   'board.empty.title': 'Your board is empty',
   'board.empty.text':
@@ -304,10 +342,6 @@ export const EN_MESSAGES = {
   'tags.error.title': 'We could not load your tags',
   'tags.error.toast': 'Could not load tags',
 
-  'tags.summary.loading': 'Loading your tags...',
-  'tags.summary.none': 'No tags yet.',
-  'tags.summary.one': '{count} tag.',
-  'tags.summary.other': '{count} tags.',
 
   'tags.col.tag': 'Tag',
   'tags.col.tasks': 'Tasks',

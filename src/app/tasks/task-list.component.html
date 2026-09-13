@@ -9,13 +9,13 @@
 <amb-page>
   <!-- Heading and filters live outside the table so they stay put while the
        table swaps between its loading, empty and populated states. -->
-  <amb-page-header [title]="'tasks.title' | t" [subtitle]="summary()">
+  <div class="amb-page-actions amb-page-actions--end">
     <p-button
       [label]="'tasks.new' | t"
       icon="pi pi-plus-circle"
       (onClick)="openCreate()"
     ></p-button>
-  </amb-page-header>
+  </div>
 
   <amb-toolbar styleClass="tasks-filters">
     <ng-container ambToolbarStart>
@@ -46,56 +46,86 @@
     </ng-container>
 
     <ng-container ambToolbarEnd>
-      <p-multiselect
-        [options]="statusOptions()"
-        [ngModel]="selectedStatuses()"
-        (ngModelChange)="onStatusChange($event)"
-        [ngModelOptions]="{ standalone: true }"
-        optionLabel="label"
-        optionValue="value"
-        [placeholder]="'tasks.filter.status' | t"
-        appendTo="body"
-        [showToggleAll]="false"
-        styleClass="tasks-filters__select"
-        [ariaLabel]="'tasks.filter.statusLabel' | t"
-      ></p-multiselect>
+      <!-- The three attribute pickers behind one control. They used to sit in
+           the toolbar as three unlabelled placeholders, which was six controls
+           in a row and gave no hint that "Status" and the Open/Done buttons
+           beside it were asking the same question. In here they are labelled,
+           stacked, and out of the way until wanted. -->
+      <p-button
+        [label]="'tasks.filter.more' | t"
+        icon="pi pi-filter"
+        severity="secondary"
+        [outlined]="true"
+        [badge]="attributeFilterBadge()"
+        badgeSeverity="contrast"
+        aria-haspopup="dialog"
+        (onClick)="filterPanel.toggle($event)"
+      ></p-button>
 
-      <p-multiselect
-        [options]="priorityOptions()"
-        [ngModel]="selectedPriorities()"
-        (ngModelChange)="onPriorityChange($event)"
-        [ngModelOptions]="{ standalone: true }"
-        optionLabel="label"
-        optionValue="value"
-        [placeholder]="'tasks.filter.priority' | t"
-        appendTo="body"
-        [showToggleAll]="false"
-        styleClass="tasks-filters__select"
-        [ariaLabel]="'tasks.filter.priorityLabel' | t"
-      ></p-multiselect>
+      <p-popover #filterPanel appendTo="body" styleClass="tasks-filter-panel">
+        <div class="tasks-filter-panel__body">
+          <amb-form-field [label]="'tasks.filter.status' | t" labelId="tasks-filter-status">
+            <p-multiselect
+              [options]="statusOptions()"
+              [ngModel]="selectedStatuses()"
+              (ngModelChange)="onStatusChange($event)"
+              [ngModelOptions]="{ standalone: true }"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="'tasks.filter.any' | t"
+              appendTo="body"
+              [showToggleAll]="false"
+              styleClass="tasks-filters__select"
+              [ariaLabel]="'tasks.filter.statusLabel' | t"
+            ></p-multiselect>
+          </amb-form-field>
 
-      @if (tags().length > 0) {
-        <p-multiselect
-          [options]="tags()"
-          [ngModel]="selectedTagIds()"
-          (ngModelChange)="onTagChange($event)"
-          [ngModelOptions]="{ standalone: true }"
-          optionLabel="name"
-          optionValue="id"
-          [placeholder]="'tasks.filter.tags' | t"
-          appendTo="body"
-          [showToggleAll]="false"
-          styleClass="tasks-filters__select"
-          [ariaLabel]="'tasks.filter.tagsLabel' | t"
-        >
-          <ng-template #item let-tag>
-            <span class="tasks-choice">
-              <span class="tasks-swatch" [style.background]="tag.color" aria-hidden="true"></span>
-              {{ tag.name }}
-            </span>
-          </ng-template>
-        </p-multiselect>
-      }
+          <amb-form-field [label]="'tasks.filter.priority' | t" labelId="tasks-filter-priority">
+            <p-multiselect
+              [options]="priorityOptions()"
+              [ngModel]="selectedPriorities()"
+              (ngModelChange)="onPriorityChange($event)"
+              [ngModelOptions]="{ standalone: true }"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="'tasks.filter.any' | t"
+              appendTo="body"
+              [showToggleAll]="false"
+              styleClass="tasks-filters__select"
+              [ariaLabel]="'tasks.filter.priorityLabel' | t"
+            ></p-multiselect>
+          </amb-form-field>
+
+          @if (tags().length > 0) {
+            <amb-form-field [label]="'tasks.filter.tags' | t" labelId="tasks-filter-tags">
+              <p-multiselect
+                [options]="tags()"
+                [ngModel]="selectedTagIds()"
+                (ngModelChange)="onTagChange($event)"
+                [ngModelOptions]="{ standalone: true }"
+                optionLabel="name"
+                optionValue="id"
+                [placeholder]="'tasks.filter.any' | t"
+                appendTo="body"
+                [showToggleAll]="false"
+                styleClass="tasks-filters__select"
+                [ariaLabel]="'tasks.filter.tagsLabel' | t"
+              >
+                <ng-template #item let-tag>
+                  <span class="tasks-choice">
+                    <span
+                      class="tasks-swatch amb-swatch"
+                      [style.background]="tag.color"
+                      aria-hidden="true"
+                    ></span>
+                    {{ tag.name }}
+                  </span>
+                </ng-template>
+              </p-multiselect>
+            </amb-form-field>
+          }
+        </div>
+      </p-popover>
 
       @if (hasFilters()) {
         <p-button
@@ -210,31 +240,21 @@
       [showCurrentPageReport]="true"
       [currentPageReportTemplate]="'primeng.pageReport' | t"
       [rowHover]="true"
-      sortMode="single"
-      sortField="dueDate"
-      [sortOrder]="1"
       responsiveLayout="stack"
       breakpoint="900px"
       styleClass="tasks-table"
     >
+      <!-- Plain headers. The list is ordered by due date, which is the order
+           this screen is for; sortable columns turned every heading into a
+           button that changed the meaning of the page from four different
+           places, and the filters above are a clearer way to ask the same
+           questions. -->
       <ng-template pTemplate="header">
         <tr>
-          <th scope="col" class="tasks-col-task" pSortableColumn="title">
-            {{ 'tasks.col.task' | t }}
-            <p-sortIcon field="title"></p-sortIcon>
-          </th>
-          <th scope="col" class="tasks-col-priority" pSortableColumn="priority">
-            {{ 'tasks.col.priority' | t }}
-            <p-sortIcon field="priority"></p-sortIcon>
-          </th>
-          <th scope="col" class="tasks-col-due" pSortableColumn="dueDate">
-            {{ 'tasks.col.due' | t }}
-            <p-sortIcon field="dueDate"></p-sortIcon>
-          </th>
-          <th scope="col" class="tasks-col-status" pSortableColumn="status">
-            {{ 'tasks.col.status' | t }}
-            <p-sortIcon field="status"></p-sortIcon>
-          </th>
+          <th scope="col" class="tasks-col-task">{{ 'tasks.col.task' | t }}</th>
+          <th scope="col" class="tasks-col-priority">{{ 'tasks.col.priority' | t }}</th>
+          <th scope="col" class="tasks-col-due">{{ 'tasks.col.due' | t }}</th>
+          <th scope="col" class="tasks-col-status">{{ 'tasks.col.status' | t }}</th>
           <th scope="col" class="tasks-col-actions">
             <span class="amb-sr-only">{{ 'common.actions' | t }}</span>
           </th>

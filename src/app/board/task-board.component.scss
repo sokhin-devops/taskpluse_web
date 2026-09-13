@@ -127,13 +127,24 @@
   @include amb.glass-nested(2, var(--amb-radius-md), var(--amb-shadow-xs));
   @include amb.transition;
 
+  /* The same rise every other interactive surface in the product uses, through
+     the token rather than a literal — so it is a pixel under Modern Ambient,
+     two under Glassmorphism, and nothing at all under Minimalist and Material,
+     which have no lift anywhere else either.
+
+     Safe against the drag: the CDK writes `transform` inline while a card is
+     being dragged, and an inline style beats this one. */
   &:hover {
     border-color: var(--amb-border-accent);
     box-shadow: var(--amb-shadow-sm);
+    transform: translateY(var(--amb-lift));
   }
 
+  /* Back to rest on press. A card that stays lifted while you are pushing it
+     down reads as unresponsive, and this is the frame just before a drag. */
   &:active {
     cursor: grabbing;
+    transform: none;
   }
 
   &:focus-within {
@@ -162,9 +173,11 @@
   opacity: 0.6;
 }
 
-.board-card__top {
+/* Title and actions. `flex-start` rather than centre: a title that wraps to two
+   lines should not drag the buttons down to its middle. */
+.board-card__head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--amb-space-2);
 }
@@ -172,7 +185,12 @@
 /* The row actions stay out of the way until the card is hovered or something
    inside it has focus, so a column of cards is not a wall of icons. Keyboard
    users get them via :focus-within rather than never. */
+/* `flex: none` so the buttons keep their size and the title absorbs the rest.
+   They hold their space while hidden rather than collapsing: a title that
+   reflowed every time the pointer crossed the card would be worse than a little
+   reserved room. */
 .board-card__actions {
+  flex: none;
   display: inline-flex;
   gap: 0.125rem;
   opacity: 0;
@@ -186,6 +204,8 @@
 }
 
 .board-card__title {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: var(--amb-text-md);
   font-weight: var(--amb-weight-medium);
   line-height: var(--amb-leading-snug);
@@ -209,13 +229,26 @@
   gap: var(--amb-space-1);
 }
 
-/* -- 3. Due date ---------------------------------------------------------- */
+/* -- 3. Meta row: priority and due date ------------------------------------ */
+
+/* The foot of the card. `space-between` puts the priority at the leading edge
+   and the date at the trailing one, and the row wraps rather than squeezing
+   when a long priority label and a long date meet in a narrow column. */
+.board-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--amb-space-2);
+  /* A little more air above it than between the lines above, so it reads as a
+     footer rather than as a fourth paragraph. */
+  margin-top: var(--amb-space-1);
+}
 
 .board-card__due {
   display: inline-flex;
   align-items: center;
   gap: var(--amb-space-1);
-  align-self: flex-start;
   font-size: var(--amb-text-xs);
   color: var(--amb-text-muted);
 
@@ -243,7 +276,13 @@
    ------------------------------------------------------------------------- */
 
 /* The card following the cursor. Opaque and lifted: it is out of the stack, so
-   it should not be see-through onto whatever it is passing over. */
+   it should not be see-through onto whatever it is passing over.
+
+   Depth is the only channel available here. A scale or a tilt would be the
+   obvious way to say "you are holding this", and neither is possible: the CDK
+   drives the preview with an inline `transform`, which beats anything written
+   here, so a `transform` in this rule is simply dead. The extra shadow step is
+   what says it instead. */
 :host ::ng-deep .cdk-drag-preview {
   box-sizing: border-box;
   border-radius: var(--amb-radius-md);
@@ -253,20 +292,35 @@
   backdrop-filter: none;
 }
 
-/* The gap left where the card will land. */
-.board-card__placeholder {
-  min-height: 3.5rem;
+/* The gap left where the card will land.
+
+   This is the CDK's own placeholder — a clone of the card being dragged — so it
+   is exactly the size of the hole that card left. The hand-written one it
+   replaced had to name a height, and every card taller or shorter than that
+   guess made the column jump on pick-up and jump back on drop.
+
+   `visibility: hidden` on the contents rather than `display: none`: the clone
+   has to keep laying its text out to keep its height. */
+:host ::ng-deep .board-card.cdk-drag-placeholder {
   border: 1px dashed var(--amb-border-accent);
-  border-radius: var(--amb-radius-md);
   background: var(--amb-accent-soft);
+  box-shadow: none;
+
+  > * {
+    visibility: hidden;
+  }
 }
 
+/* The cards shuffling aside to open that gap, and the one settling into place
+   after a drop. Fast rather than base: this is direct manipulation, and 200ms
+   of easing between the cursor moving and the list responding is felt as the
+   board lagging behind the hand. */
 :host ::ng-deep .cdk-drag-animating {
-  transition: transform var(--amb-duration-base) var(--amb-ease);
+  transition: transform var(--amb-duration-fast) var(--amb-ease);
 }
 
 :host ::ng-deep .board-column__body.cdk-drop-list-dragging .board-card:not(.cdk-drag-placeholder) {
-  transition: transform var(--amb-duration-base) var(--amb-ease);
+  transition: transform var(--amb-duration-fast) var(--amb-ease);
 }
 
 /* Highlights the column the cursor is currently over. */
@@ -301,8 +355,14 @@
   }
 }
 
-@include amb.respond-below(amb.$amb-bp-xs) {
-  /* On a touch screen there is no hover, so the actions are always visible. */
+/* On a device with no hover the actions can never be revealed, so they are
+   always shown.
+
+   Keyed off the input rather than off the viewport width, which is what this
+   used to do. Width is a poor proxy for touch in both directions: a tablet or a
+   touch laptop is wider than the phone breakpoint and still cannot hover, and a
+   narrow desktop window can. The pointer query asks the question directly. */
+@media (hover: none) {
   .board-card__actions {
     opacity: 1;
   }

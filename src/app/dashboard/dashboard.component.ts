@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -12,17 +12,24 @@ import { ToggleButtonModule } from 'primeng/togglebutton';
 import { TooltipModule } from 'primeng/tooltip';
 
 import {
+  AmbientActionTileComponent,
   AmbientActionsDirective,
   AmbientBadgeComponent,
   AmbientCardComponent,
   AmbientEmptyStateComponent,
   AmbientPageComponent,
-  AmbientPageHeaderComponent,
   AmbientStatCardComponent
 } from '../ambient/ambient';
 import { toErrorMessage } from '../core/api-error';
 import { readableTextOn } from '../core/tag.model';
-import { TaskStats, priorityKey, toDate } from '../core/task.model';
+import {
+  TASK_STATUSES,
+  TaskStats,
+  TaskStatus,
+  priorityKey,
+  statusKey,
+  toDate
+} from '../core/task.model';
 import { TaskService } from '../core/task.service';
 import { LocaleService } from '../i18n/locale.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -35,8 +42,28 @@ interface Tile {
   /** Route and query the tile links to, so a number is a way in rather than a dead end. */
   link: string;
   query: Record<string, string>;
+  /** Which hue the icon medallion wears. Always tied to what the figure means. */
+  tone: 'accent' | 'info' | 'success' | 'warn' | 'danger';
   /** Set when the figure is something to act on, e.g. overdue work. */
   emphasis?: 'attention';
+}
+
+/** One shortcut in the quick-actions grid. */
+interface Shortcut {
+  label: string;
+  icon: string;
+  link: string;
+  query: Record<string, string>;
+}
+
+/** One segment of the status bar, plus the legend entry that names it. */
+interface StatusSegment {
+  label: string;
+  count: number;
+  /** Share of the whole, as a percentage. Drives the segment's width. */
+  percent: number;
+  /** Which step of the ordinal ramp paints it. */
+  step: 1 | 2 | 3;
 }
 
 /** A point on the trend chart, in SVG user units plus the values behind it. */
@@ -125,6 +152,7 @@ const MAX_X_LABELS = 7;
   imports: [
     DatePipe,
     DecimalPipe,
+    NgTemplateOutlet,
     FormsModule,
     RouterLink,
     ButtonModule,
@@ -133,12 +161,12 @@ const MAX_X_LABELS = 7;
     ToastModule,
     ToggleButtonModule,
     TooltipModule,
+    AmbientActionTileComponent,
     AmbientActionsDirective,
     AmbientBadgeComponent,
     AmbientCardComponent,
     AmbientEmptyStateComponent,
     AmbientPageComponent,
-    AmbientPageHeaderComponent,
     AmbientStatCardComponent,
     TranslatePipe
   ],
@@ -186,7 +214,7 @@ export class DashboardComponent implements OnInit {
     }))
   );
 
-  readonly skeletonTiles = [0, 1, 2, 3, 4];
+  readonly skeletonTiles = [0, 1, 2, 3];
 
   // --- headline figures --------------------------------------------------
 
@@ -212,28 +240,31 @@ export class DashboardComponent implements OnInit {
     })
   );
 
+  /**
+   * The KPI row: four counts, each a way into the list that produced it.
+   *
+   * <p>Four rather than the five it used to be. "In progress" left, because the
+   * status breakdown beside the trend chart now shows it in context — as a share
+   * of all the work rather than as a number on its own — and a figure reported
+   * twice on one screen invites the reader to look for a difference between the
+   * two.</p>
+   */
   readonly tiles = computed<Tile[]>(() => {
     const stats = this.stats();
     if (!stats) {
       return [];
     }
-    // Annotated rather than inferred: without it TypeScript builds a union of the five
-    // literal shapes (only one of which carries `emphasis`) and then reports that the
-    // union does not match Tile[].
+    // Annotated rather than inferred: without it TypeScript builds a union of the
+    // literal shapes (only one of which carries `emphasis`) and then reports that
+    // the union does not match Tile[].
     const tiles: Tile[] = [
       {
         label: this.i18n.t('dashboard.tile.open'),
         value: stats.open,
         icon: 'pi pi-inbox',
         link: '/tasks',
-        query: { scope: 'open' }
-      },
-      {
-        label: this.i18n.t('dashboard.tile.inProgress'),
-        value: stats.inProgress,
-        icon: 'pi pi-sync',
-        link: '/board',
-        query: {}
+        query: { scope: 'open' },
+        tone: 'accent'
       },
       {
         label: this.i18n.t('dashboard.tile.overdue'),
@@ -241,6 +272,7 @@ export class DashboardComponent implements OnInit {
         icon: 'pi pi-exclamation-triangle',
         link: '/tasks',
         query: { scope: 'overdue' },
+        tone: 'danger',
         // Overdue work is the one figure on this page that asks to be acted on.
         emphasis: stats.overdue > 0 ? 'attention' : undefined
       },
@@ -249,17 +281,126 @@ export class DashboardComponent implements OnInit {
         value: stats.dueToday,
         icon: 'pi pi-calendar',
         link: '/tasks',
-        query: { scope: 'open' }
+        query: { scope: 'open' },
+        tone: 'warn'
       },
       {
         label: this.i18n.t('dashboard.tile.next7'),
         value: stats.dueNext7Days,
         icon: 'pi pi-calendar-clock',
         link: '/tasks',
-        query: { scope: 'open' }
+        query: { scope: 'open' },
+        tone: 'info'
       }
     ];
     return tiles;
+  });
+
+  /**
+   * Where the work stands, as one bar.
+   *
+   * <p>A part-to-whole across three classes, so a stacked bar — not a donut.
+   * Three slices of a ring are read by comparing arc lengths, which people are
+   * measurably bad at; the same three quantities along one axis are read by
+   * comparing lengths, which they are good at.</p>
+   *
+   * <p>The ramp is ordinal rather than categorical, because these categories
+   * have an order: To do → In progress → Done is a direction of travel, and
+   * three unrelated hues would throw that away. Light to dark maps onto it, so
+   * the bar fills with colour as the work gets finished.</p>
+   *
+   * <p>Empty classes are dropped rather than rendered at zero width. A segment
+   * with no width is invisible but still in the legend, and a legend entry
+   * pointing at nothing reads as a rendering fault.</p>
+   */
+  readonly statusSegments = computed<StatusSegment[]>(() => {
+    const stats = this.stats();
+    if (!stats || stats.total === 0) {
+      return [];
+    }
+
+    const steps: Record<TaskStatus, 1 | 2 | 3> = { TODO: 1, IN_PROGRESS: 2, DONE: 3 };
+
+    return TASK_STATUSES.map((status) => {
+      const count = stats.byStatus.find((row) => row.status === status)?.count ?? 0;
+      return {
+        label: this.i18n.t(statusKey(status)),
+        count,
+        percent: (count / stats.total) * 100,
+        step: steps[status]
+      };
+    }).filter((segment) => segment.count > 0);
+  });
+
+  /**
+   * The stacked bar, read aloud.
+   *
+   * <p>Built by joining the same label/count pairs the legend shows, so the two
+   * cannot disagree. The separator is a catalogue string rather than a literal
+   * comma: the list separator is not the same character in every script.</p>
+   */
+  readonly statusSummary = computed(() =>
+    this.statusSegments()
+      .map((segment) =>
+        this.i18n.t('dashboard.status.segment', {
+          label: segment.label,
+          count: segment.count
+        })
+      )
+      .join(this.i18n.t('common.listSeparator'))
+  );
+
+  /**
+   * The shortcut grid.
+   *
+   * <p>Every tile is a real destination that exists today. The temptation on a
+   * panel like this is to fill the grid — six tiles look better than four — and
+   * the cost is a shortcut to somewhere that does nothing, which is worse than
+   * one fewer tile.</p>
+   */
+  readonly shortcutLinks = computed<Shortcut[]>(() => {
+    // Annotated rather than inferred, for the same reason `tiles` is: the
+    // literals have different `query` shapes, so TypeScript builds a union of
+    // them and then reports that the union is not Shortcut[].
+    const shortcuts: Shortcut[] = [
+    {
+      label: this.i18n.t('dashboard.shortcut.newTask'),
+      icon: 'pi pi-plus',
+      link: '/tasks',
+      query: { new: '1' }
+    },
+    {
+      label: this.i18n.t('dashboard.shortcut.allTasks'),
+      icon: 'pi pi-list',
+      link: '/tasks',
+      query: {}
+    },
+    {
+      label: this.i18n.t('dashboard.shortcut.board'),
+      icon: 'pi pi-th-large',
+      link: '/board',
+      query: {}
+    },
+    {
+      label: this.i18n.t('dashboard.shortcut.tags'),
+      icon: 'pi pi-tags',
+      link: '/tags',
+      query: {}
+    },
+    {
+      label: this.i18n.t('dashboard.shortcut.overdue'),
+      icon: 'pi pi-exclamation-circle',
+      link: '/tasks',
+      query: { scope: 'overdue' }
+    },
+    {
+      label: this.i18n.t('dashboard.shortcut.completed'),
+      icon: 'pi pi-check-circle',
+      link: '/tasks',
+      query: { scope: 'done' }
+    }
+    ];
+    return shortcuts;
   });
 
   // --- trend chart -------------------------------------------------------

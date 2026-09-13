@@ -104,12 +104,27 @@ export interface AmbientBrand {
           [tooltipDisabled]="!collapsed()"
           [showDelay]="tooltipDelay"
         >
-          <span class="amb-brand__mark" aria-hidden="true">
+          <span class="amb-brand__mark amb-brandmark" aria-hidden="true">
             <i [class]="brand().icon"></i>
           </span>
           <span class="amb-brand__name">{{ brand().name }}</span>
         </a>
+      </div>
 
+      <ng-container *ngTemplateOutlet="nav; context: { docked: true }" />
+
+      <div class="amb-sidebar__footer">
+        <ng-content select="[ambSidebarFooter]" />
+      </div>
+
+      <!-- The collapse control, at the foot of the rail rather than beside the
+           wordmark where it used to be.
+
+           It was competing with the brand for the one row that says what this
+           product is, and it is not a peer of the brand: it is chrome for the
+           rail itself, used once and then left alone for weeks. Down here it is
+           still a click away and no longer the second thing you read. -->
+      <div class="amb-sidebar__collapse">
         <button
           type="button"
           class="amb-sidebar__toggle"
@@ -122,15 +137,8 @@ export interface AmbientBrand {
           [showDelay]="tooltipDelay"
           (click)="collapsed.set(!collapsed())"
         >
-          <i class="pi pi-angle-double-left
-" aria-hidden="true"></i>
+          <i class="pi pi-angle-double-left" aria-hidden="true"></i>
         </button>
-      </div>
-
-      <ng-container *ngTemplateOutlet="nav; context: { docked: true }" />
-
-      <div class="amb-sidebar__footer">
-        <ng-content select="[ambSidebarFooter]" />
       </div>
     </aside>
 
@@ -239,14 +247,11 @@ export interface AmbientBrand {
       align-items: center;
       justify-content: center;
       flex: none;
+      // Size only. The fill, the rim and the contrast colour come from the
+      // shared .amb-brandmark class, which the sign-in card wears too.
       width: 2rem;
       height: 2rem;
       border-radius: var(--amb-radius-sm);
-      // The one place a solid accent fill appears in the chrome. It is the
-      // product mark, so it is allowed to be the loudest thing in the rail.
-      background: linear-gradient(140deg, var(--amb-accent-500), var(--amb-accent));
-      box-shadow: var(--amb-shadow-sm), inset 0 1px 0 rgb(255 255 255 / 0.25);
-      color: var(--amb-accent-contrast);
 
       i {
         font-size: 1rem;
@@ -264,6 +269,27 @@ export interface AmbientBrand {
     }
 
     // -- Collapse toggle ---------------------------------------------------
+
+    // The last row in the rail. Aligned to the trailing edge while expanded, so
+    // it sits under the caret of the account button above it rather than
+    // starting a third left-hand column of its own.
+    .amb-sidebar__collapse {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: var(--amb-space-2);
+    }
+
+    // With a footer, that block is what the auto margin pushes to the bottom
+    // and this row rides under it. With no footer — which is this application,
+    // now that the account has moved to the topbar — the job falls to this row,
+    // or it would sit directly under the last nav link halfway up the rail.
+    //
+    // The adjacent-sibling selector is what keeps both cases right from one
+    // stylesheet: two auto margins in a flex column split the free space
+    // between them, which would park the footer in the middle.
+    .amb-sidebar__footer:empty + .amb-sidebar__collapse {
+      margin-top: auto;
+    }
 
     .amb-sidebar__toggle {
       display: inline-flex;
@@ -405,15 +431,25 @@ export interface AmbientBrand {
     // only there because it was set on a desktop and remembered.
 
     :host(.amb-sidebar--rail) .amb-shell__sidebar {
-      .amb-sidebar__head {
-        flex-direction: column;
-        gap: var(--amb-space-1);
-      }
-
+      // The brand keeps the base flex-grow and fills the rail, so its own
+      // centring is what places the mark — landing it on the same axis as every
+      // nav icon below it.
+      //
+      // It used to be flex: none here, which was right only while the head was
+      // a column: the toggle shared that row, the collapsed head turned
+      // vertical, and the head's own cross-axis centring did the work. With the
+      // toggle moved to the foot of the rail the head is a plain row again, and
+      // a non-growing brand left a 32px mark against the left edge while the
+      // icons under it were centred in 48px.
       .amb-brand {
-        flex: none;
         justify-content: center;
         padding-inline: 0;
+      }
+
+      // Nothing to align to the trailing edge in a 48px rail — the button is
+      // most of the width, so it centres like everything else.
+      .amb-sidebar__collapse {
+        justify-content: center;
       }
 
       // Out of the flow, so the icon stays centred in the rail rather than

@@ -10,9 +10,6 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  *
  * @example
  * <amb-page>
- *   <amb-page-header title="Tasks" subtitle="12 open">
- *     <p-button ambCardActions label="New task" />
- *   </amb-page-header>
  *   <amb-card> ... </amb-card>
  * </amb-page>
  */
@@ -62,47 +59,4 @@ export class AmbientPageComponent {
 
     return classes.join(' ');
   });
-}
-
-/**
- * The title block at the top of a screen: an optional eyebrow, the page title,
- * a supporting line, and the page's primary actions on the right.
- *
- * <p>The title is always an {@code <h1>}. A screen has exactly one, and putting
- * it here rather than in each template is what keeps the document outline
- * correct without every page having to remember.</p>
- *
- * <p>Actions are projected, so they stay ordinary PrimeNG buttons with all their
- * own behaviour; this component only decides where they sit and how they wrap.</p>
- */
-@Component({
-  selector: 'amb-page-header',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    class: 'amb-page-header'
-  },
-  template: `
-    <div class="amb-page-header__text">
-      @if (eyebrow()) {
-        <span class="amb-eyebrow">{{ eyebrow() }}</span>
-      }
-      <h1 class="amb-page-title">{{ title() }}</h1>
-      @if (subtitle()) {
-        <p class="amb-page-subtitle">{{ subtitle() }}</p>
-      }
-    </div>
-
-    <div class="amb-page-header__actions">
-      <ng-content />
-    </div>
-  `
-})
-export class AmbientPageHeaderComponent {
-  readonly title = input.required<string>();
-
-  /** One line under the title. Context, not instructions. */
-  readonly subtitle = input<string>();
-
-  /** A small uppercase label above the title, for a breadcrumb-like context. */
-  readonly eyebrow = input<string>();
 }

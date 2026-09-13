@@ -37,7 +37,8 @@ export const KM_MESSAGES: MessageCatalogue = {
   'common.delete': 'លុប',
   'common.actions': 'សកម្មភាព',
   'common.tryAgain': 'ព្យាយាមម្ដងទៀត',
-  'common.refresh': 'ផ្ទុកឡើងវិញ',
+  'common.close': 'បិទ',
+  'common.listSeparator': ' ',
 
   'common.error.apiDown':
     'API របស់ TaskPulse មិនឆ្លើយតបទេ។ សូមពិនិត្យថាវាកំពុងដំណើរការ រួចព្យាយាមម្ដងទៀត។',
@@ -51,11 +52,14 @@ export const KM_MESSAGES: MessageCatalogue = {
   'nav.tasks': 'កិច្ចការ',
   'nav.board': 'ក្ដារកិច្ចការ',
   'nav.tags': 'ស្លាក',
+  'nav.appearance': 'រូបរាង',
   'nav.landmark': 'មីនុយមេ',
   'nav.open': 'បើកមីនុយ',
   'nav.expand': 'ពង្រីកមីនុយ',
   'nav.collapse': 'បង្រួមមីនុយ',
   'nav.home': 'ទំព័រដើម {name}',
+
+  'shell.greeting': 'សូមស្វាគមន៍ {name}',
 
   'account.label': 'គណនី',
   'account.yours': 'គណនីរបស់អ្នក',
@@ -65,19 +69,42 @@ export const KM_MESSAGES: MessageCatalogue = {
   // -- Appearance ----------------------------------------------------------
 
   'appearance.legend': 'រូបរាង',
+  'appearance.title': 'រូបរាង',
+  'appearance.pageSubtitle': 'ជ្រើសរើសរបៀបបង្ហាញរបស់ TaskPulse។ ការផ្លាស់ប្ដូរមានប្រសិទ្ធភាពភ្លាមៗ។',
+  'appearance.openPage': 'បើកទំព័ររូបរាង',
   'appearance.scheme': 'ទម្រង់ពណ៌',
   'appearance.light': 'ភ្លឺ',
   'appearance.dark': 'ងងឹត',
   'appearance.system': 'ប្រព័ន្ធ',
   'appearance.accentLegend': 'ពណ៌សំខាន់',
   'appearance.accent': 'ពណ៌សំខាន់',
-  'appearance.trigger': 'រូបរាង៖ ទម្រង់ {scheme} ពណ៌សំខាន់ {accent}',
+  'appearance.trigger': 'រូបរាង៖ រចនាបថ {vibe} ទម្រង់ {scheme} ពណ៌សំខាន់ {accent}',
   'appearance.accent.indigo': 'ខៀវទុំ',
   'appearance.accent.violet': 'ស្វាយ',
   'appearance.accent.blue': 'ខៀវ',
   'appearance.accent.teal': 'ខៀវបៃតង',
   'appearance.accent.emerald': 'បៃតង',
   'appearance.accent.rose': 'ផ្កាឈូក',
+  'appearance.accent.custom': 'ប្ដូរតាមចិត្ត',
+
+  // រចនាបថចំណុចប្រទាក់។ ឈ្មោះរចនាបថទាំងប្រាំជាពាក្យបច្ចេកទេសសកល ដូច្នេះ
+  // ទុកជាអក្សរឡាតាំង ហើយបន្ទាត់ពន្យល់ខ្លីខាងក្រោមទើបជាខ្មែរ។
+  'appearance.vibeLegend': 'រចនាបថ',
+  'appearance.vibe': 'រចនាបថចំណុចប្រទាក់',
+  'appearance.vibe.minimal': 'Minimalist',
+  'appearance.vibe.minimal.hint': 'រាបស្មើ ស្ងប់ស្ងាត់ បែងចែកដោយបន្ទាត់ស្ដើង',
+  'appearance.vibe.ambient': 'Modern Ambient',
+  'appearance.vibe.ambient.hint': 'ពន្លឺទន់ភ្លន់ពីក្រោយផ្ទៃព្រិល',
+  'appearance.vibe.glass': 'Glassmorphism',
+  'appearance.vibe.glass.hint': 'ព្រិលជ្រៅ គែមភ្លឺ មានពណ៌នៅខាងក្រោយ',
+  'appearance.vibe.material': 'Material Design',
+  'appearance.vibe.material.hint': 'ផ្ទៃតឹងដូចក្រដាស លើកឡើងដោយស្រមោល',
+  'appearance.vibe.neumorph': 'Neumorphism',
+  'appearance.vibe.neumorph.hint': 'រូបរាងផុសចេញពីផ្ទៃតែមួយ',
+
+  'appearance.customPicker': 'ជ្រើសរើសពណ៌សំខាន់',
+  'appearance.customHex': 'លេខកូដពណ៌សំខាន់ (hex)',
+  'appearance.customHexInvalid': 'នេះមិនមែនជាពណ៌ទេ។ សាកល្បងបែប #4f46e5។',
 
   // -- Language ------------------------------------------------------------
 
@@ -128,22 +155,29 @@ export const KM_MESSAGES: MessageCatalogue = {
 
   // -- Dashboard -----------------------------------------------------------
 
-  'dashboard.title': 'ផ្ទាំងគ្រប់គ្រង',
-  'dashboard.subtitle': 'ស្ថានភាពការងាររបស់អ្នកនាពេលនេះ។',
   'dashboard.error.title': 'យើងមិនអាចផ្ទុកផ្ទាំងគ្រប់គ្រងរបស់អ្នកបានទេ',
   'dashboard.error.toast': 'មិនអាចផ្ទុកផ្ទាំងគ្រប់គ្រងបានទេ',
 
   'dashboard.figures': 'តួលេខសំខាន់ៗ',
-  'dashboard.completionRate': 'អត្រាបញ្ចប់',
-  'dashboard.completionMeter': 'អត្រាបញ្ចប់៖ {caption}',
   'dashboard.noTasks': 'មិនទាន់មានកិច្ចការ',
   'dashboard.completionCaption': 'រួចរាល់ {completed} ក្នុងចំណោម {total} កិច្ចការ',
 
   'dashboard.tile.open': 'មិនទាន់រួច',
-  'dashboard.tile.inProgress': 'កំពុងធ្វើ',
   'dashboard.tile.overdue': 'ហួសកំណត់',
   'dashboard.tile.dueToday': 'ផុតកំណត់ថ្ងៃនេះ',
   'dashboard.tile.next7': '7 ថ្ងៃខាងមុខ',
+
+  'dashboard.status.title': 'ស្ថានភាពការងារ',
+  'dashboard.status.subtitle': 'កិច្ចការទាំងអស់ តាមដំណាក់កាល',
+  'dashboard.status.segment': '{label}៖ {count}',
+
+  'dashboard.shortcuts.title': 'ផ្លូវកាត់',
+  'dashboard.shortcut.newTask': 'កិច្ចការថ្មី',
+  'dashboard.shortcut.allTasks': 'កិច្ចការទាំងអស់',
+  'dashboard.shortcut.board': 'ក្ដារ',
+  'dashboard.shortcut.tags': 'ស្លាក',
+  'dashboard.shortcut.overdue': 'ហួសកំណត់',
+  'dashboard.shortcut.completed': 'បានបញ្ចប់',
 
   'dashboard.trend.title': 'បានបង្កើត និងបានបញ្ចប់',
   'dashboard.trend.subtitle':
@@ -163,7 +197,6 @@ export const KM_MESSAGES: MessageCatalogue = {
     'ក្រាហ្វបន្ទាត់នៃកិច្ចការដែលបានបង្កើត និងបានបញ្ចប់ក្នុងមួយថ្ងៃ ក្នុងរយៈពេល {days} ថ្ងៃចុងក្រោយ។ សូមប្ដូរទៅតារាង ដើម្បីមើលតួលេខពិតប្រាកដ។',
   'dashboard.trend.empty': 'គ្មានសកម្មភាពក្នុងរយៈពេលនេះទេ',
 
-  'dashboard.breakdowns': 'ការបែងចែក',
   'dashboard.priority.title': 'ការងារនៅសល់តាមអាទិភាព',
   'dashboard.priority.subtitle': 'មិនរាប់បញ្ចូលកិច្ចការដែលរួចរាល់ទេ។',
   'dashboard.priority.empty': 'គ្មានអ្វីនៅសល់ទេ។ អ្វីៗរួចរាល់ទាំងអស់។',
@@ -182,13 +215,6 @@ export const KM_MESSAGES: MessageCatalogue = {
   'tasks.error.title': 'យើងមិនអាចផ្ទុកកិច្ចការរបស់អ្នកបានទេ',
   'tasks.error.toast': 'មិនអាចផ្ទុកកិច្ចការបានទេ',
 
-  'tasks.summary.loading': 'កំពុងផ្ទុកកិច្ចការរបស់អ្នក...',
-  'tasks.summary.none': 'មិនមានអ្វីនៅក្នុងបញ្ជីទេឥឡូវនេះ។',
-  'tasks.summary.noMatches': 'គ្មានកិច្ចការត្រូវនឹងតម្រងទាំងនេះទេ។',
-  'tasks.summary.total.one': 'សរុប {count} កិច្ចការ។',
-  'tasks.summary.total.other': 'សរុប {count} កិច្ចការ។',
-  'tasks.summary.matching.one': 'ត្រូវគ្នា {count} កិច្ចការ។',
-  'tasks.summary.matching.other': 'ត្រូវគ្នា {count} កិច្ចការ។',
 
   'tasks.search.placeholder': 'ស្វែងរកចំណងជើង និងការពិពណ៌នា',
   'tasks.search.label': 'ស្វែងរកកិច្ចការតាមចំណងជើង ឬការពិពណ៌នា',
@@ -203,7 +229,9 @@ export const KM_MESSAGES: MessageCatalogue = {
   'tasks.filter.priorityLabel': 'ត្រងតាមអាទិភាព',
   'tasks.filter.tags': 'ស្លាក',
   'tasks.filter.tagsLabel': 'ត្រងតាមស្លាក',
-  'tasks.filter.clear': 'សម្អាត ({count})',
+  'tasks.filter.more': 'តម្រង',
+  'tasks.filter.any': 'ទាំងអស់',
+  'tasks.filter.clear':'សម្អាត ({count})',
   'tasks.filter.clearPlain': 'សម្អាតតម្រង',
 
   'tasks.col.task': 'កិច្ចការ',
@@ -269,9 +297,6 @@ export const KM_MESSAGES: MessageCatalogue = {
   'board.error.title': 'យើងមិនអាចផ្ទុកក្ដារកិច្ចការរបស់អ្នកបានទេ',
   'board.error.toast': 'មិនអាចផ្ទុកក្ដារកិច្ចការបានទេ',
 
-  'board.summary.loading': 'កំពុងផ្ទុកក្ដារកិច្ចការរបស់អ្នក...',
-  'board.summary.none': 'មិនទាន់មានអ្វីនៅលើក្ដារទេ។',
-  'board.summary': 'មិនទាន់រួច {open} រួចរាល់ {done}។ អូសកាតដើម្បីផ្លាស់ទី។',
 
   'board.empty.title': 'ក្ដារកិច្ចការរបស់អ្នកទទេ',
   'board.empty.text':
@@ -291,10 +316,6 @@ export const KM_MESSAGES: MessageCatalogue = {
   'tags.error.title': 'យើងមិនអាចផ្ទុកស្លាករបស់អ្នកបានទេ',
   'tags.error.toast': 'មិនអាចផ្ទុកស្លាកបានទេ',
 
-  'tags.summary.loading': 'កំពុងផ្ទុកស្លាករបស់អ្នក...',
-  'tags.summary.none': 'មិនទាន់មានស្លាកទេ។',
-  'tags.summary.one': '{count} ស្លាក។',
-  'tags.summary.other': '{count} ស្លាក។',
 
   'tags.col.tag': 'ស្លាក',
   'tags.col.tasks': 'កិច្ចការ',

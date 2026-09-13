@@ -1,32 +1,33 @@
 <p-toast position="top-right"></p-toast>
 
 <amb-page>
-  <amb-page-header [title]="'dashboard.title' | t" [subtitle]="'dashboard.subtitle' | t">
-    <p-button
-      icon="pi pi-refresh"
-      [label]="'common.refresh' | t"
-      severity="secondary"
-      [outlined]="true"
-      [loading]="loading()"
-      (onClick)="reload()"
-    ></p-button>
-  </amb-page-header>
-
   @if (loading()) {
     <section class="dash-kpis" aria-hidden="true">
-      <div class="dash-hero amb-surface-2">
-        <p-skeleton width="6rem" height="0.75rem"></p-skeleton>
-        <p-skeleton width="8rem" height="3rem" styleClass="dash-skeleton-gap"></p-skeleton>
-        <p-skeleton width="100%" height="0.5rem" borderRadius="1rem"></p-skeleton>
-      </div>
       @for (tile of skeletonTiles; track tile) {
         <amb-stat-card label="" [value]="0" loading />
       }
     </section>
 
-    <amb-card>
-      <p-skeleton width="100%" height="14rem"></p-skeleton>
-    </amb-card>
+    <!-- The same grid as the real content, so nothing moves when it arrives.
+         It used to be two cards against the five below, so the page grew by
+         three card-heights the moment the data landed. The shortcuts are the
+         exception: they need no data, so the real ones render straight away
+         rather than a grey rectangle pretending to be them. -->
+    <div class="dash-grid">
+      <amb-card class="dash-grid__wide" aria-hidden="true">
+        <p-skeleton width="100%" height="14rem"></p-skeleton>
+      </amb-card>
+      <amb-card aria-hidden="true">
+        <p-skeleton width="100%" height="14rem"></p-skeleton>
+      </amb-card>
+      <amb-card aria-hidden="true">
+        <p-skeleton width="100%" height="7rem"></p-skeleton>
+      </amb-card>
+      <amb-card aria-hidden="true">
+        <p-skeleton width="100%" height="7rem"></p-skeleton>
+      </amb-card>
+      <ng-container *ngTemplateOutlet="shortcuts" />
+    </div>
   } @else if (loadFailed()) {
     <amb-card flush>
       <amb-empty-state
@@ -44,29 +45,9 @@
       </amb-empty-state>
     </amb-card>
   } @else if (stats()) {
-    <!-- Hero figure + KPI row. These are single numbers, so they are tiles rather
-         than a bar chart of five bars. -->
+    <!-- KPI row. These are single numbers, so they are tiles rather than a bar
+         chart of four bars. -->
     <section class="dash-kpis" [attr.aria-label]="'dashboard.figures' | t">
-      <div class="dash-hero amb-surface-2">
-        <span class="amb-eyebrow">{{ 'dashboard.completionRate' | t }}</span>
-        <strong class="dash-hero__value">
-          {{ completionRate() | number: '1.0-1' : dateLocale() }}<span class="dash-hero__unit">%</span>
-        </strong>
-        <div
-          class="dash-meter"
-          role="progressbar"
-          [attr.aria-valuenow]="completionRate()"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          [attr.aria-label]="'dashboard.completionMeter' | t: { caption: completionCaption() }"
-        >
-          <!-- Track is a lighter step of the fill's own ramp, so the pair reads as one
-               scale rather than two competing colours. -->
-          <div class="dash-meter__fill" [style.width.%]="completionRate()"></div>
-        </div>
-        <span class="dash-hero__caption">{{ completionCaption() }}</span>
-      </div>
-
       @for (tile of tiles(); track tile.label) {
         <amb-stat-card
           [label]="tile.label"
@@ -74,13 +55,22 @@
           [icon]="tile.icon"
           [link]="tile.link"
           [query]="tile.query"
+          [tone]="tile.tone"
           [emphasis]="tile.emphasis ?? 'default'"
         />
       }
     </section>
 
+    <!-- The content grid: three columns, with the trend spanning two of them.
+         Everything below sits in it, so the page is one grid rather than a
+         stack of sections each inventing its own. -->
+    <div class="dash-grid">
     <!-- Trend: change over time, two series, so a line chart with a legend. -->
-    <amb-card [title]="'dashboard.trend.title' | t" [subtitle]="trendSubtitle()">
+    <amb-card
+      class="dash-grid__wide"
+      [title]="'dashboard.trend.title' | t"
+      [subtitle]="trendSubtitle()"
+    >
       <div ambActions class="dash-chart__controls">
         <p-selectbutton
           [options]="rangeOptions()"
@@ -301,8 +291,59 @@
       }
     </amb-card>
 
-    <!-- Two magnitude breakdowns. One series each, so no legend and one hue. -->
-    <section class="dash-breakdowns" [attr.aria-label]="'dashboard.breakdowns' | t">
+      <!-- Where the work stands: a part-to-whole across three ordered classes,
+           so one stacked bar on the ordinal ramp rather than three arcs of a
+           ring. The lead figure is the completion rate, which is the same
+           question asked as a single number. -->
+      <amb-card
+        [title]="'dashboard.status.title' | t"
+        [subtitle]="'dashboard.status.subtitle' | t"
+      >
+        <div class="dash-status">
+          <strong class="dash-status__figure">
+            {{ completionRate() | number: '1.0-1' : dateLocale() }}<span
+              class="dash-status__unit"
+              >%</span
+            >
+          </strong>
+          <span class="dash-status__caption">{{ completionCaption() }}</span>
+
+          @if (statusSegments().length > 0) {
+            <!-- The bar is decorative for anyone who cannot see it: the legend
+                 below carries every label and every count as text, so nothing
+                 here is reachable only by colour. -->
+            <div class="dash-status__bar" role="img" [attr.aria-label]="statusSummary()">
+              @for (segment of statusSegments(); track segment.label) {
+                <span
+                  class="dash-status__segment"
+                  [attr.data-step]="segment.step"
+                  [style.flex-basis.%]="segment.percent"
+                ></span>
+              }
+            </div>
+
+            <ul class="dash-status__legend amb-list-reset">
+              @for (segment of statusSegments(); track segment.label) {
+                <li class="dash-status__item">
+                  <span
+                    class="dash-status__key"
+                    [attr.data-step]="segment.step"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="dash-status__name">{{ segment.label }}</span>
+                  <span class="dash-status__count amb-num">
+                    {{ segment.count | number: '1.0-0' : dateLocale() }}
+                  </span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="dash-bars__empty">{{ 'dashboard.noTasks' | t }}</p>
+          }
+        </div>
+      </amb-card>
+
+      <!-- Two magnitude breakdowns. One series each, so no legend and one hue. -->
       <amb-card
         [title]="'dashboard.priority.title' | t"
         [subtitle]="'dashboard.priority.subtitle' | t"
@@ -368,6 +409,26 @@
           </p>
         }
       </amb-card>
-    </section>
+
+      <ng-container *ngTemplateOutlet="shortcuts" />
+    </div>
   }
 </amb-page>
+
+<!-- Rendered in both the loading and the loaded grid, from one definition, so
+     the two cannot drift apart. Shortcuts. Every tile is somewhere that exists;
+     the grid is not padded out to fill its rows. -->
+<ng-template #shortcuts>
+  <amb-card [title]="'dashboard.shortcuts.title' | t">
+    <nav class="dash-shortcuts" [attr.aria-label]="'dashboard.shortcuts.title' | t">
+      @for (shortcut of shortcutLinks(); track shortcut.label) {
+        <amb-action-tile
+          [icon]="shortcut.icon"
+          [label]="shortcut.label"
+          [link]="shortcut.link"
+          [query]="shortcut.query"
+        />
+      }
+    </nav>
+  </amb-card>
+</ng-template>

@@ -3,16 +3,15 @@
 
    Almost nothing. The shell's grid, its sidebar, its topbar and its scroll
    container are all in `_ambient-layout.scss`, and the navigation rail is
-   `<amb-sidebar>`. What is left here is the account block, which is specific to
+   `<amb-sidebar>`. What is left here is the account chip, which is specific to
    this application rather than to the design system: another product using the
    Ambient layer would put something else in the same slot.
 
    Sections
      1. Host
-     2. Account block (desktop rail)
-     2b. Collapsed rail
-     3. Account button (mobile topbar)
-     4. Topbar wordmark
+     2. Account chip (topbar)
+     3. Guest bar (signed out)
+     4. Topbar
      5. Account menu
    ========================================================================= */
 
@@ -27,48 +26,25 @@
   display: contents;
 }
 
-/* -- 2. Account block (desktop rail) -------------------------------------- */
+/* -- 2. Account chip (topbar) ---------------------------------------------
 
-/* The rail's footer: the appearance control, then the account.
+   The account used to live at the foot of the navigation rail, with a second,
+   avatar-only copy in the topbar for the widths where the rail is a drawer.
+   It is one control in one place now: the rail carries the mark, the
+   destinations and the control that collapses it, and nothing else.
+   ------------------------------------------------------------------------- */
 
-   `min-width: 0` on the account trigger and not on the row itself — the theme
-   button keeps its size and the identity absorbs whatever is left, which is what
-   stops a long email pushing the button off the rail. */
-.app-footer {
+.app-account__trigger {
+  flex: none;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--amb-space-2);
-  min-width: 0;
-}
-
-/* Appearance and language, kept together as one group.
-
-   They are the two controls that change how the product presents itself rather
-   than what it contains, and they are the only things in the rail that are not
-   navigation or identity. Grouping them means the rail collapses to a tidy
-   stack of two rather than scattering them either side of the account block. */
-.app-footer__settings {
-  display: flex;
-  align-items: center;
-  gap: var(--amb-space-1);
-  flex: none;
-}
-
-/* A row at the foot of the rail: avatar, then the identity, then the affordance
-   that says it opens something. */
-.app-account__trigger {
-  /* Positioned so the identity, which leaves the flow when the rail collapses,
-     resolves against this button rather than against the shell. */
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--amb-space-3);
-  width: 100%;
-  padding: var(--amb-space-2);
+  /* Tighter than a button: this sits in a 60px bar beside two icon controls and
+     should read as part of that cluster rather than as a third thing. */
+  padding: var(--amb-space-1) var(--amb-space-2);
   border: 1px solid transparent;
-  border-radius: var(--amb-radius-md);
+  border-radius: var(--amb-radius-pill);
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -82,26 +58,14 @@
   }
 }
 
-/* `min-width: 0` on both the column and its children: without it a long email
-   forces the flex item wider than the rail instead of being truncated. */
-.app-account__identity {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
+/* Capped rather than free: a long name would otherwise push the search box
+   narrower on every screen the moment someone signs in with one. */
 .app-account__name {
+  min-width: 0;
+  max-width: 10rem;
   font-size: var(--amb-text-sm);
-  font-weight: var(--amb-weight-semibold);
+  font-weight: var(--amb-weight-medium);
   color: var(--amb-text);
-
-  @include amb.truncate;
-}
-
-.app-account__email {
-  font-size: var(--amb-text-xs);
-  color: var(--amb-text-subtle);
 
   @include amb.truncate;
 }
@@ -112,71 +76,23 @@
   color: var(--amb-text-subtle);
 }
 
-/* -- 2b. Collapsed rail ---------------------------------------------------
-   The account block reduces to its avatar, and the appearance control stacks
-   above it because two 38px buttons will not sit side by side in a 48px rail.
-
-   The identity leaves the flow rather than being hidden, for the same reason
-   the nav labels do: `display: none` would take the name and the email out of
-   the accessibility tree along with them, and the button's own aria-label is
-   not a substitute for the account actually being announced.
-
-   Keyed off a class bound in the template rather than off `.amb-shell--rail`
-   from an ancestor, so the selector stays inside this component and does not
-   depend on how Angular scopes a descendant combinator.
-   ------------------------------------------------------------------------- */
-
-.app-footer--rail {
-  flex-direction: column;
-  gap: var(--amb-space-1);
-
-  /* Two icon buttons do not fit side by side in a 48px rail, so the group
-     turns the same corner the footer does. */
-  .app-footer__settings {
-    flex-direction: column;
+/* Below the search breakpoint the bar is title, language and account in very
+   little room, so the chip falls back to the avatar alone. `display: none` is
+   right here and wrong in the collapsing rail: there the name is the only
+   label the control has, while here the button keeps its own aria-label and
+   the name is repeated as the first line of the menu it opens. */
+@include amb.respond-below(amb.$amb-bp-md) {
+  .app-account__name,
+  .app-account__caret {
+    display: none;
   }
 
   .app-account__trigger {
-    justify-content: center;
-    /* No inline padding: a 36px avatar does not fit in a 48px rail once 8px of
-       padding is taken off each side. */
-    padding-inline: 0;
-  }
-
-  .app-account__identity,
-  .app-account__caret {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
+    padding: var(--amb-space-1);
   }
 }
 
-.app-account__identity,
-.app-account__caret {
-  @include amb.transition-prop(opacity, var(--amb-duration-base));
-}
-
-/* -- 3. Account button (mobile topbar) ------------------------------------ */
-
-/* The same account, reduced to its avatar. Only rendered below the nav
-   breakpoint, where the rail — and so the block above — is not on screen. */
-.app-account__avatar-button {
-  display: inline-flex;
-  padding: 0;
-  border: 0;
-  border-radius: var(--amb-radius-md);
-  background: transparent;
-  cursor: pointer;
-
-  @include amb.transition;
-  @include amb.focusable;
-
-  &:hover {
-    opacity: 0.85;
-  }
-}
-
-/* -- 3b. Guest bar (signed out) ------------------------------------------- */
+/* -- 3. Guest bar (signed out) -------------------------------------------- */
 
 /* Just the appearance control, top right, over the ambient canvas. No surface:
    the login card is the only object on screen and this must not compete with it.
@@ -190,17 +106,18 @@
   padding: var(--amb-space-4) var(--amb-gutter) 0;
 }
 
-/* -- 4. Topbar wordmark --------------------------------------------------- */
+/* -- 4. Topbar ------------------------------------------------------------ */
 
-.app-topbar__brand {
-  font-size: var(--amb-text-lg);
-  font-weight: var(--amb-weight-semibold);
-  letter-spacing: var(--amb-tracking-snug);
-  color: var(--amb-text);
+/* The drawer button is the one part of the bar that is phone-only: above the
+   nav breakpoint the rail is already on screen and opening a drawer over it
+   would be opening the thing you are looking at.
 
-  &:hover {
-    color: var(--amb-text);
-    text-decoration: none;
+   `display: none` rather than `visibility: hidden`, because there is nothing to
+   announce either — the navigation it opens is fully present in the rail, so
+   removing the button removes a duplicate rather than an affordance. */
+@include amb.respond-above(amb.$amb-bp-nav) {
+  .app-topbar__menu {
+    display: none;
   }
 }
 

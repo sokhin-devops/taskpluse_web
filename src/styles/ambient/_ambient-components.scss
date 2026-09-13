@@ -62,20 +62,20 @@
 
   // Only the solid variants get a shadow. An outlined or text button that casts
   // one reads as a filled button someone forgot to fill.
-  // The inset line is a specular highlight on the top edge — the same trick as
-  // the glass surfaces, at a lower alpha because it sits on a saturated fill
+  // `--amb-fill-sheen` is a specular highlight on the top edge — the same trick
+  // as the glass surfaces, at a lower alpha because it sits on a saturated fill
   // rather than on a tint. White at 18% works on every accent in the palette,
-  // which a hand-picked lighter shade of one hue would not.
+  // which a hand-picked lighter shade of one hue would not; and it is a token
+  // so the vibes that have no bevel anywhere else do not have one here either.
   &:not(.p-button-text):not(.p-button-outlined):not(.p-button-link) {
-    box-shadow: var(--amb-shadow-sm), inset 0 1px 0 0 rgb(255 255 255 / 0.18);
+    box-shadow: var(--amb-shadow-sm), var(--amb-fill-sheen);
 
     &:not(:disabled):hover {
-      box-shadow: var(--amb-shadow-md), var(--amb-glow-soft),
-        inset 0 1px 0 0 rgb(255 255 255 / 0.22);
+      box-shadow: var(--amb-shadow-md), var(--amb-glow-soft), var(--amb-fill-sheen);
     }
 
     &:not(:disabled):active {
-      box-shadow: var(--amb-shadow-xs);
+      box-shadow: var(--amb-shadow-pressed);
     }
   }
 
@@ -106,8 +106,8 @@
   background-image: var(--amb-glass-sheen);
   box-shadow: var(--amb-shadow-xs), var(--amb-glass-inset);
   color: var(--amb-text-muted);
-  -webkit-backdrop-filter: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
-  backdrop-filter: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
+  -webkit-backdrop-filter: var(--amb-glass-filter-soft);
+  backdrop-filter: var(--amb-glass-filter-soft);
 
   &:not(:disabled):hover {
     border-color: var(--amb-border-accent);
@@ -146,8 +146,8 @@
 .p-datepicker-input,
 .p-password-input,
 .p-inputnumber-input {
-  -webkit-backdrop-filter: blur(var(--amb-blur-sm));
-  backdrop-filter: blur(var(--amb-blur-sm));
+  -webkit-backdrop-filter: var(--amb-glass-filter-field);
+  backdrop-filter: var(--amb-glass-filter-field);
 
   @include m.transition;
 }
@@ -233,8 +233,8 @@
 .p-dialog-mask,
 .p-drawer-mask {
   background: var(--amb-mask);
-  -webkit-backdrop-filter: blur(var(--amb-blur-sm)) saturate(120%);
-  backdrop-filter: blur(var(--amb-blur-sm)) saturate(120%);
+  -webkit-backdrop-filter: var(--amb-mask-filter);
+  backdrop-filter: var(--amb-mask-filter);
 }
 
 .p-dialog,
@@ -420,8 +420,8 @@
 
 .p-message,
 .p-toast-message-content {
-  -webkit-backdrop-filter: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
-  backdrop-filter: blur(var(--amb-blur-md)) saturate(var(--amb-blur-saturate));
+  -webkit-backdrop-filter: var(--amb-glass-filter-soft);
+  backdrop-filter: var(--amb-glass-filter-soft);
 }
 
 // The toast stack clears the topbar rather than starting under it.
@@ -464,8 +464,8 @@
 .p-tooltip .p-tooltip-text {
   font-size: var(--amb-text-sm);
   line-height: var(--amb-leading-snug);
-  -webkit-backdrop-filter: blur(var(--amb-blur-sm));
-  backdrop-filter: blur(var(--amb-blur-sm));
+  -webkit-backdrop-filter: var(--amb-glass-filter-field);
+  backdrop-filter: var(--amb-glass-filter-field);
 }
 
 // The arrow is coloured from a separate token per direction; all four are
@@ -506,7 +506,7 @@
 // The selected segment is the raised chip inside the well.
 .p-selectbutton .p-togglebutton.p-togglebutton-checked {
   background: var(--amb-surface-solid);
-  box-shadow: var(--amb-shadow-sm), inset 0 1px 0 0 var(--amb-highlight);
+  box-shadow: var(--amb-shadow-sm), var(--amb-fill-sheen);
   color: var(--amb-accent-on-soft);
 }
 
@@ -523,7 +523,7 @@
 // This is deliberately last so it wins over every blur declared above.
 
 .amb-shell__sidebar,
-.amb-shell__topbar,
+.amb-topbar,
 .amb-surface-1,
 .amb-surface-2,
 .amb-surface-3,

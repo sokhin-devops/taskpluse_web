@@ -174,14 +174,18 @@ describe('TaskListComponent', () => {
       expect(request!.request.params.get('size')).toBe('20');
     });
 
-    it('translates the table sort order into a direction', () => {
+    // The table has no sortable headers any more: the list answers "what is
+    // coming up", and due date ascending is that answer. The lazy-load event
+    // still carries sort fields — PrimeNG's own defaults rather than anything
+    // the reader chose — and they must be ignored rather than obeyed.
+    it('always orders by due date, whatever the table reports', () => {
       initialise();
 
       component.onLazyLoad({ first: 0, rows: 10, sortField: 'title', sortOrder: -1 });
       const request = flushTaskRequests();
 
-      expect(request!.request.params.get('sort')).toBe('title');
-      expect(request!.request.params.get('direction')).toBe('desc');
+      expect(request!.request.params.get('sort')).toBe('dueDate');
+      expect(request!.request.params.get('direction')).toBe('asc');
     });
   });
 
