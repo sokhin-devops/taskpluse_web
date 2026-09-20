@@ -36,18 +36,22 @@ pipeline {
         }
 
         stage('Verify Build') {
-            steps {
-                dir('taskpluse_web') {
-                    sh '''
-                        echo "Angular build output:"
-                        ls -lah dist/taskpulse_web/browser
+    steps {
+        sh '''
+            echo "Current directory:"
+            pwd
 
-                        echo "Checking index.html..."
-                        test -f dist/taskpulse_web/browser/index.html
-                    '''
-                }
-            }
-        }
+            echo "Workspace:"
+            ls -lah
+
+            echo "All directories:"
+            find . -maxdepth 3 -type d | sort
+
+            echo "Looking for Angular index.html:"
+            find . -name index.html -type f | sort
+        '''
+    }
+}
 
         stage('Archive Artifact') {
             steps {
