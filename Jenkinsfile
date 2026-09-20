@@ -21,56 +21,64 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                dir('taskpluse_web') {
-                    sh 'npm ci'
-                }
+                sh 'npm ci'
             }
         }
 
         stage('Build Angular') {
             steps {
-                dir('taskpluse_web') {
-                    sh 'npm run build'
-                }
+                sh 'npm run build'
             }
         }
 
         stage('Verify Build') {
-    steps {
-        sh '''
-            echo "Current directory:"
-            pwd
+            steps {
+                sh '''
+                    echo "Angular build output:"
+                    ls -lah dist/taskpulse_web/browser
 
-            echo "Workspace:"
-            ls -lah
-
-            echo "All directories:"
-            find . -maxdepth 3 -type d | sort
-
-            echo "Looking for Angular index.html:"
-            find . -name index.html -type f | sort
-        '''
-    }
-}
-
+                    echo "Checking index.html..."
+                    test -f dist/taskpulse_web/browser/index.html
+                '''
+            }
+        }
 
         stage('Archive Artifact') {
             steps {
                 archiveArtifacts(
-    artifacts: 'dist/taskpulse_web/browser/**',
-    fingerprint: true
-)
+                    artifacts: 'dist/taskpulse_web/browser/**',
+                    fingerprint: true
+                )
             }
         }
     }
 
     post {
+
         success {
-            echo 'TaskPluse Web CI completed successfully.'
+            script {
+                def releaseVersion = env.BUILD_NUMBER
+
+                echo "TaskPluse Web CI completed successfully."
+                echo "Release version: ${releaseVersion}"
+
+                build job: 'taskpluse-web-deploy',
+                    parameters: [
+                        string(
+                            name: 'RELEASE_VERSION',
+                            value: releaseVersion
+                        ),
+                        string(
+                            name: 'CI_BUILD_NUMBER',
+                            value: env.BUILD_NUMBER
+                        )
+                    ],
+                    wait: false
+            }
         }
 
         failure {
-            echo 'TaskPluse Web CI failed.'
+            echo 'TaskPluse Web CI failed. Deploy will not run.'
         }
     }
 }
