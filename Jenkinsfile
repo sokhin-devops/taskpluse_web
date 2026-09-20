@@ -53,14 +53,10 @@ pipeline {
     }
 }
 
-        stage('Archive Artifact') {
-            steps {
-                archiveArtifacts(
-                    artifacts: 'taskpluse_web/dist/taskpulse_web/browser/**',
-                    fingerprint: true
-                )
-            }
-        }
+        archiveArtifacts(
+    artifacts: 'dist/taskpulse_web/browser/**',
+    fingerprint: true
+)
     }
 
     post {
