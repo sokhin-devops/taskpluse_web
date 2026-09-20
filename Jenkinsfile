@@ -6,6 +6,7 @@ pipeline {
         stage('Check Environment') {
             steps {
                 sh '''
+                    echo "=== Environment ==="
                     node --version
                     npm --version
                     java --version
@@ -21,24 +22,34 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm ci'
+                sh '''
+                    echo "=== Installing dependencies ==="
+                    npm ci
+                '''
             }
         }
 
         stage('Build Angular') {
             steps {
-                sh 'npm run build'
+                sh '''
+                    echo "=== Building Angular ==="
+                    npm run build
+                '''
             }
         }
 
         stage('Verify Build') {
             steps {
                 sh '''
-                    echo "Angular build output:"
+                    echo "=== Angular build output ==="
                     ls -lah dist/taskpulse_web/browser
 
-                    echo "Checking index.html..."
+                    echo ""
+                    echo "=== Checking index.html ==="
                     test -f dist/taskpulse_web/browser/index.html
+
+                    echo ""
+                    echo "Build verification successful."
                 '''
             }
         }
@@ -59,10 +70,14 @@ pipeline {
             script {
                 def releaseVersion = env.BUILD_NUMBER
 
-                echo "TaskPluse Web CI completed successfully."
-                echo "Release version: ${releaseVersion}"
+                echo "======================================"
+                echo "TaskPluse Web CI SUCCESS"
+                echo "Release Version : ${releaseVersion}"
+                echo "CI Build Number : ${env.BUILD_NUMBER}"
+                echo "======================================"
 
-                build job: 'taskpluse-web-deploy',
+                build(
+                    job: 'taskpluse-web-deploy',
                     parameters: [
                         string(
                             name: 'RELEASE_VERSION',
@@ -74,11 +89,13 @@ pipeline {
                         )
                     ],
                     wait: false
+                )
             }
         }
 
         failure {
-            echo 'TaskPluse Web CI failed. Deploy will not run.'
+            echo "TaskPluse Web CI FAILED."
+            echo "Deploy will NOT run."
         }
     }
 }
