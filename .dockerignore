@@ -1,0 +1,19 @@
+# The image builds from source with its own `npm ci`. Copying these in would
+# bloat the build context and risk shipping files that don't match the source.
+node_modules/
+dist/
+.angular/
+coverage/
+
+# Version control and editor state
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Never part of an image
+*.log
+.env
+.env.*
+Dockerfile
+.dockerignore
