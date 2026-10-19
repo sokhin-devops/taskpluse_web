@@ -3,7 +3,7 @@
 // and checks GitHub for new commits every 5 minutes.
 //
 //   Checkout -> Gitleaks -> Unit tests -> Dependency scan -> Build image
-//            -> Image scan -> Push to Nexus
+//            -> Image scan -> Push to Nexus -> Start deploy (taskpluse-deploy job)
 //
 // Node, npm and Chromium live in the Dockerfile's stages, not on the Jenkins
 // machine - Jenkins only needs docker, trivy and gitleaks.
@@ -102,6 +102,17 @@ pipeline {
                         docker logout ${REGISTRY}
                     '''
                 }
+            }
+        }
+
+        stage('Start deploy') {
+            steps {
+                // CD is its own job (taskpluse_deploy/Jenkinsfile): staging, smoke test,
+                // approval, prod. Don't wait for it - it pauses for a person.
+                build job: 'taskpluse-deploy', wait: false, parameters: [
+                    string(name: 'APP', value: 'web'),
+                    string(name: 'TAG', value: env.TAG)
+                ]
             }
         }
     }
