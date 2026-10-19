@@ -18,6 +18,19 @@ RUN npm run build
 
 
 # =========================
+# Test (CI only: docker build --target test)
+# =========================
+# Unit tests in headless Chromium. Never part of the final image - the
+# runtime stage below copies only the built files from `builder`.
+FROM builder AS test
+
+RUN apk add --no-cache chromium
+ENV CHROME_BIN=/usr/bin/chromium-browser
+
+RUN npx ng test --watch=false --browsers=ChromeHeadlessCI
+
+
+# =========================
 # Stage 2: Runtime
 # =========================
 # Just nginx and the static files - no Node, no source, no node_modules.
